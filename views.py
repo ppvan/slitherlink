@@ -11,9 +11,8 @@ class Window(tk.Tk):
         super().__init__()
         self.size = size
         self.viewmodel = board_vmodel
-
-        self.build_ui()
         sv_ttk.set_theme("dark")
+        self.build_ui()
 
     def build_ui(self) -> None:
         # Center the window
@@ -25,11 +24,14 @@ class Window(tk.Tk):
         self.board = BoardFrame(self, self.viewmodel)
         self.board.pack(side=tk.LEFT, fill=tk.Y)
 
-        self.controls = ControlFrame(self, new_cmd=self.draw_board)
+        self.controls = ControlFrame(self, self.viewmodel)
         self.controls.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=2, pady=2)
 
+        # subcribe when board changes
+        self.viewmodel.subcribe(self.board.redraw)
+
     def draw_board(self):
-        self.board.draw_board()
+        self.board.redraw()
 
 
 class BoardFrame(ttk.Frame):
@@ -52,14 +54,12 @@ class BoardFrame(ttk.Frame):
         self.canvas.config(height=event.height)
         self.canvas.config(width=event.height)
 
-    def draw_board(self):
-        size = 6
+    def redraw(self):
+        size = self.viewmodel.board.size
         border_size = 4
-
         canvas_size = self.canvas.winfo_width()
         point_size = (canvas_size - 2 * border_size) / (8 * size - 7)
         spacer = 7 * point_size
-
         colors = ["#44222F", "#21300D", "#B4DC7F", "#3C3D00"]
 
         self.canvas.delete("all")
@@ -113,11 +113,22 @@ class BoardFrame(ttk.Frame):
 
 
 class ControlFrame(ttk.Frame):
-    def __init__(self, master, new_cmd):
+    def __init__(self, master, viewmodel: BoardViewModel):
         super().__init__(master)
-        self.new_cmd = new_cmd
+        self.viewmodel = viewmodel
+
+        self.board_size = tk.StringVar()
+        self.difficulty = tk.StringVar()
 
         self.build_ui()
+
+    def new_board(self):
+        size, difficulty = self.board_size.get(), self.difficulty.get()
+        self.viewmodel.new_board_cmd(size, difficulty)
+
+    def solve_board(self):
+        print("solve board cmd")
+        pass
 
     def build_ui(self):
         option_fr = ttk.Frame(self)
@@ -125,16 +136,24 @@ class ControlFrame(ttk.Frame):
         row1 = ttk.Frame(option_fr)
         label1 = ttk.Label(row1, text="Board Size", width=12)
         combox1 = ttk.Combobox(
-            row1, values=[1, 2, 3, 4, 5, 6, 7, 8, 9], state="readonly"
+            row1,
+            values=BoardViewModel.BOARD_SIZES,
+            state="readonly",
+            textvariable=self.board_size,
         )
+        combox1.current(0)
         label1.pack(side=tk.LEFT, padx=4, pady=2)
         combox1.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
 
         row2 = ttk.Frame(option_fr)
         label2 = ttk.Label(row2, text="Difficulty", width=12)
         combox2 = ttk.Combobox(
-            row2, values=[1, 2, 3, 4, 5, 6, 7, 8, 9], state="readonly"
+            row2,
+            values=BoardViewModel.DIFFICULTY,
+            textvariable=self.difficulty,
+            state="readonly",
         )
+        combox2.current(0)
         label2.pack(side=tk.LEFT, padx=4, pady=2)
         combox2.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
 
@@ -146,10 +165,10 @@ class ControlFrame(ttk.Frame):
         spacer.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
         button_fr = ttk.Frame(self)
-        new_btn = ttk.Button(button_fr, text="New", command=self.new_cmd)
+        new_btn = ttk.Button(button_fr, text="New", command=self.new_board)
         new_btn.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=2, pady=2)
 
-        solve_btn = ttk.Button(button_fr, text="Solve")
+        solve_btn = ttk.Button(button_fr, text="Solve", command=self.solve_board)
         solve_btn.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=2, pady=2)
 
         button_fr.pack(side=tk.TOP, fill=tk.X, pady=10)
