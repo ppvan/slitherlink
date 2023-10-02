@@ -1,4 +1,4 @@
-from models import Board
+from models import Board, Edge, Node
 from typing import List, Callable
 
 
@@ -41,6 +41,11 @@ def sample_board():
         [3, -1, 3, 3, -1],
     ]
 
-    edges = []
+    edges = [
+        Edge(Node(0, 0), Node(0, 1)),
+        Edge(Node(0, 1), Node(1, 1)),
+        Edge(Node(1, 1), Node(1, 2)),
+        Edge(Node(1, 2), Node(2, 2)),
+    ]
 
     return Board(size, cells, edges)

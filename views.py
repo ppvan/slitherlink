@@ -84,7 +84,7 @@ class BoardFrame(ttk.Frame):
                     y1,
                     x1 + point_size,
                     y1 + point_size,
-                    fill="black",
+                    fill="#D56F3E",
                 )
 
         # Draw cell
@@ -110,6 +110,21 @@ class BoardFrame(ttk.Frame):
                         font=("Arial", 40),
                         fill=colors[cell_val],
                     )
+
+        # Draw edges
+        for edge in self.viewmodel.board.edges:
+            x1 = edge.src.row * (spacer + point_size) + border_size
+            y1 = edge.src.column * (spacer + point_size) + border_size
+            x2 = edge.dest.row * (spacer + point_size) + border_size + point_size
+            y2 = edge.dest.column * (spacer + point_size) + border_size + point_size
+            self.canvas.create_rectangle(
+                x1,
+                y1,
+                x2,
+                y2,
+                fill="#89B6A5",
+                outline="#0A2E36",
+            )
 
 
 class ControlFrame(ttk.Frame):
