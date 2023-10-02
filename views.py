@@ -3,6 +3,7 @@ from tkinter import ttk
 from typing import Tuple
 from tkinter import font as tkfont
 import sv_ttk
+from PIL import Image, ImageTk
 from viewmodels import BoardViewModel
 
 
@@ -48,12 +49,20 @@ class BoardFrame(ttk.Frame):
         )
         self.bind("<Configure>", self.__configure)
 
+        self.draw_intro("assets/intro.bmp")
         self.canvas.pack(side=tk.LEFT)
 
     def __configure(self, event):
         """Make canvas alway a square"""
         self.canvas.config(height=event.height)
         self.canvas.config(width=event.height)
+
+    def draw_intro(self, filepath: str):
+        img = Image.open(filepath)
+        self.photo = ImageTk.PhotoImage(img)  # keep a reference
+
+        self.canvas.create_rectangle(0, 0, img.width, img.height, fill="red")
+        self.canvas.create_image(0, 0, image=self.photo, anchor="nw")
 
     def redraw(self):
         size = self.viewmodel.board.size
