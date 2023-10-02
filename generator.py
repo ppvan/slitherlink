@@ -66,8 +66,8 @@ def get_puzzle(size: int) -> str:
 difficulties = [4, 10, 11, 1, 5, 2, 6, 3, 7, 8, 9]
 
 puzzles = []
-for dif in difficulties:
-    for _ in range(4):
+for dif in difficulties[:1]:
+    for _ in range(4)[:1]:
         puzzles.append(get_puzzle(dif))
 
 for puzzle in puzzles:

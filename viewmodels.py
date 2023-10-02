@@ -232,7 +232,7 @@ class BoardViewModel:
 
         # print("new board cmd")
 
-        # self.board = sample_board()
+        self.board = sample_board()
 
         self.board_changed()
         pass
