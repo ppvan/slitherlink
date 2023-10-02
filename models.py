@@ -15,9 +15,7 @@ class Board:
     cells: List[List[int]]
     edges: List[Edge]
 
-    def __init__(
-        self, size: int, cells: List[List[int]] = None, edges: List[Edge] = None
-    ):
+    def __init__(self, size: int, cells: List[List[int]] = [], edges: List[Edge] = []):
         self.size = size
         self.cells = cells
         self.edges = edges

@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from typing import Tuple
-
+from tkinter import font as tkfont
 import sv_ttk
 from viewmodels import BoardViewModel
 
@@ -37,6 +37,7 @@ class Window(tk.Tk):
 class BoardFrame(ttk.Frame):
     def __init__(self, master, viewmodel: BoardViewModel):
         super().__init__(master, width=600, height=600)
+        self.base_font = tkfont.Font(family="Arial", size=12)
 
         self.viewmodel = viewmodel
         self.canvas = tk.Canvas(
@@ -61,6 +62,10 @@ class BoardFrame(ttk.Frame):
         point_size = (canvas_size - 2 * border_size) / (8 * size - 7)
         spacer = 7 * point_size
         colors = ["#44222F", "#21300D", "#B4DC7F", "#3C3D00"]
+
+        font_size = min(int(spacer // 2), 48)
+        self.base_font.config(size=font_size)
+        font = self.base_font
 
         self.canvas.delete("all")
         self.canvas.create_rectangle(
@@ -99,15 +104,13 @@ class BoardFrame(ttk.Frame):
                 cell_val = self.viewmodel.board.cells[y][x]
 
                 if cell_val == -1:
-                    self.canvas.create_text(
-                        centerx, centery, text=" ", font=("Arial", 40)
-                    )
+                    self.canvas.create_text(centerx, centery, text=" ", font=font)
                 else:
                     self.canvas.create_text(
                         centerx,
                         centery,
                         text=str(cell_val),
-                        font=("Arial", 40),
+                        font=font,
                         fill=colors[cell_val],
                     )
 
