@@ -1,9 +1,7 @@
-from models import Board, Edge, Node, Cell
+from models import Board, Edge, Cell
 from typing import List, Callable
 import utils
-from pysat.solvers import Glucose42
-from pysat.card import EncType, CardEnc
-from pysat.formula import CNF, IDPool
+import pycosat
 
 from pathlib import Path
 
@@ -12,6 +10,7 @@ class BoardViewModel:
     board: Board
     puzzles: List[Board]
     subcribers: List[Callable]
+    constraints: List[List[int]]
 
     BOARD_SIZES = ["5x5", "7x7", "10x10", "15x15", "20x20", "25x30"]
     DIFFICULTY = ["easy", "medium", "hard"]
@@ -20,6 +19,7 @@ class BoardViewModel:
         self.board = board
         self.subcribers = []
         self.puzzles = load_puzzles("puzzles.txt")
+        self.constraints = []
 
     def subcribe(self, callback):
         self.subcribers.append(callback)
@@ -48,38 +48,83 @@ class BoardViewModel:
                 nodes[i][j].top = (m + 1) * n + j * m + i
                 nodes[i][j].bottom = (m + 1) * n + j * m + i + 1
 
-    def _add_rules(self) -> CNF:
-        clauses = CNF()
-        self.aux_start = (
-            (self.board.rows + 1) * self.board.columns
-            + (self.board.columns + 1) * self.board.rows
-            + 1
-        )
-        vpool = IDPool(start_from=self.aux_start)
+    def _cell_contraints(self):
+        def zero(e1, e2, e3, e4):
+            """
+            All e1, e2, e3 and e4 must be false.
+            """
+            return [[-e1], [-e2], [-e3], [-e4]]
+
+        def one(e1, e2, e3, e4):
+            """
+            The "exactly one" constraint can be expressed as
+            * Amongst any two of booleans, at least one must be false.
+            * Atleast one of the booleans is true.
+            """
+            return [
+                [-e1, -e2],
+                [-e1, -e3],
+                [-e1, -e4],
+                [-e2, -e3],
+                [-e2, -e4],
+                [-e3, -e4],
+                [e1, e2, e3, e4],
+            ]
+
+        def two(e1, e2, e3, e4):
+            """
+            Amongst any three booleans, at least one must be true,
+            and atleast one must be false.
+            """
+            return [
+                [e2, e3, e4],
+                [e1, e3, e4],
+                [e1, e2, e4],
+                [e1, e2, e3],
+                [-e2, -e3, -e4],
+                [-e1, -e3, -e4],
+                [-e1, -e2, -e4],
+                [-e1, -e2, -e3],
+            ]
+
+        def three(e1, e2, e3, e4):
+            """
+            Amongst any two booleans, at least one must be true. This ensures
+            that there are at least three true booleans.
+            Also add a clause that ensures at least one of them must be false.
+            Together they ensure the "exactly three correct"
+            """
+            return [
+                [e1, e2],
+                [e1, e3],
+                [e1, e4],
+                [e2, e3],
+                [e2, e4],
+                [e3, e4],
+                [-e1, -e2, -e3, -e4],
+            ]
+
+        atmosts = [zero, one, two, three]
         for i in range(self.board.rows):
             for j in range(self.board.columns):
                 cell = self.board.cells[i][j]
                 if cell.value == -1:
                     continue
                 else:
-                    lits = [cell.top, cell.bottom, cell.left, cell.right]
-                    cnf = CardEnc.equals(
-                        list(lits),
-                        bound=cell.value,
-                        encoding=EncType.seqcounter,
-                        vpool=vpool,
+                    cnf = atmosts[cell.value](
+                        cell.top, cell.bottom, cell.left, cell.right
                     )
-                    clauses.extend(cnf.clauses)
 
-        # return clauses
+                    self.constraints.extend(cnf)
+        return self.constraints
 
-        # inner nodes
+    def _loop_contraints(self):
         for i in range(1, self.board.rows):
             for j in range(1, self.board.columns):
                 node = self.board.nodes[i][j]
                 e1, e2, e3, e4 = [node.top, node.right, node.bottom, node.left]
 
-                clauses.extend(
+                self.constraints.extend(
                     [
                         [-e1, -e2, -e3],
                         [-e1, -e2, -e4],
@@ -97,48 +142,27 @@ class BoardViewModel:
         for j in range(1, self.board.columns):
             node = self.board.nodes[0][j]
             e1, e2, e3, e4 = [node.top, node.right, node.bottom, node.left]
-            clauses.extend(
-                [
-                    [-e2, e3, e4],
-                    [e2, -e3, e4],
-                    [e2, e3, -e4],
-                    [-e2, -e3, -e4],
-                ]
+            self.constraints.extend(
+                [[-e2, e3, e4], [e2, -e3, e4], [e2, e3, -e4], [-e2, -e3, -e4]]
             )
 
             node = self.board.nodes[self.board.rows][j]
             e1, e2, e3, e4 = [node.top, node.right, node.bottom, node.left]
-            # utils.DEBUG(f"node[{node.row},{node.column}]", e1, e2, e3, e4)
-            clauses.extend(
-                [
-                    [-e1, e2, e4],
-                    [e1, -e2, e4],
-                    [e1, e2, -e4],
-                    [-e1, -e2, -e4],
-                ]
+            self.constraints.extend(
+                [[-e1, e2, e4], [e1, -e2, e4], [e1, e2, -e4], [-e1, -e2, -e4]]
             )
 
         for i in range(1, self.board.rows):
             node = self.board.nodes[i][0]
             e1, e2, e3, e4 = [node.top, node.right, node.bottom, node.left]
-            clauses.extend(
-                [
-                    [-e1, e2, e3],
-                    [e1, -e2, e3],
-                    [e1, e2, -e3],
-                    [-e1, -e2, -e3],
-                ]
+            self.constraints.extend(
+                [[-e1, e2, e3], [e1, -e2, e3], [e1, e2, -e3], [-e1, -e2, -e3]]
             )
 
             node = self.board.nodes[i][self.board.columns]
             e1, e2, e3, e4 = [node.top, node.right, node.bottom, node.left]
-            clauses.extend(
-                [
-                    [-e1, e3, e4],
-                    [e1, -e3, e4],
-                    [e1, e3, -e4],
-                    [-e1, -e3, -e4],
-                ]
+            self.constraints.extend(
+                [[-e1, e3, e4], [e1, -e3, e4], [e1, e3, -e4], [-e1, -e3, -e4]]
             )
 
         # conner nodes
@@ -148,10 +172,10 @@ class BoardViewModel:
         bottomright = self.board.nodes[self.board.rows][self.board.columns]
 
         e1, e2, e3, e4 = [topleft.top, topleft.right, topleft.bottom, topleft.left]
-        cnf.clauses.extend([[-e2, e3], [e2, -e3]])
+        self.constraints.extend([[-e2, e3], [e2, -e3]])
 
         e1, e2, e3, e4 = [topright.top, topright.right, topright.bottom, topright.left]
-        cnf.clauses.extend([[-e4, e3], [e4, -e3]])
+        self.constraints.extend([[-e4, e3], [e4, -e3]])
 
         e1, e2, e3, e4 = [
             bottomleft.top,
@@ -159,7 +183,7 @@ class BoardViewModel:
             bottomleft.bottom,
             bottomleft.left,
         ]
-        cnf.clauses.extend([[-e2, e1], [e2, -e1]])
+        self.constraints.extend([[-e2, e1], [e2, -e1]])
 
         e1, e2, e3, e4 = [
             bottomright.top,
@@ -167,48 +191,57 @@ class BoardViewModel:
             bottomright.bottom,
             bottomright.left,
         ]
-        cnf.clauses.extend([[-e4, e1], [e4, -e1]])
+        self.constraints.extend([[-e4, e1], [e4, -e1]])
 
-        return clauses
+        return self.constraints
+
+    def encode_rules(self):
+        self.constraints = []
+        self._cell_contraints()
+        self._loop_contraints()
+
+        return self.constraints
 
     def _solve(self):
-        cnf = self._add_rules()
+        clauses = self.encode_rules()
         ans = []
 
-        utils.DEBUG(len(cnf.clauses))
+        utils.DEBUG(len(clauses))
 
-        with Glucose42(bootstrap_with=cnf.clauses) as s:
-            if s.solve():
-                ans = s.get_model()
+        test_solution = pycosat.solve(clauses)
+
+        if test_solution in ["UNSAT", "UNKNOWN"]:
+            utils.DEBUG("unsat")
+            ans = []
+        else:
+            ans = test_solution
 
         return ans
 
     def new_board_cmd(self, size: str, difficulty: str):
         """size in one of BOARD_SIZE. difficulty in one of DIFFICULTY"""
-        # assert size in BoardViewModel.BOARD_SIZES
-        # assert difficulty in BoardViewModel.DIFFICULTY
+        assert size in BoardViewModel.BOARD_SIZES
+        assert difficulty in BoardViewModel.DIFFICULTY
 
-        # rows, columns = [int(x) for x in size.split("x")]
+        rows, columns = [int(x) for x in size.split("x")]
 
-        # for board in self.puzzles:
-        #     if board.rows == rows and board.columns == columns:
-        #         self.board = board
-        #         break
+        for board in self.puzzles:
+            if board.rows == rows and board.columns == columns:
+                self.board = board
+                break
 
         # print("new board cmd")
 
-        self.board = sample_board()
+        # self.board = sample_board()
 
         self.board_changed()
         pass
 
     def _extract_solution(self, model: List[int]):
         nodes = self.board.nodes
-        clean_model = [x for x in model[slice(0, self.aux_start)] if x > 0]
+        clean_model = [x for x in model if x > 0]
         m = self.board.rows
         n = self.board.columns
-
-        utils.DEBUG(clean_model)
 
         for i in range(m):
             for j in range(n):
@@ -233,7 +266,7 @@ class BoardViewModel:
         print("solve board cmd")
         self.assign_edges_index()
         print("assign done")
-        self._add_rules()
+        self.encode_rules()
         model = self._solve()
         self._extract_solution(model)
 
