@@ -38,7 +38,7 @@ def get_puzzle(size: int) -> str:
 
     output = " ".join(" ".join(row_spec) for row_spec in row_specs)
 
-    return f"{len(row_specs)} {output}"
+    return f"{len(row_specs)} {len(row_specs[0])} {output}"
 
 
 # Only works against the "old version" of the website, since the new version

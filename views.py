@@ -64,8 +64,11 @@ class BoardFrame(ttk.Frame):
         self.canvas.create_rectangle(0, 0, img.width, img.height, fill="red")
         self.canvas.create_image(0, 0, image=self.photo, anchor="nw")
 
-    def redraw(self):
-        size = self.viewmodel.board.size
+    def redraw(self, debug=True):
+        rows = self.viewmodel.board.rows
+        columns = self.viewmodel.board.columns
+
+        size = max(rows, columns) + 1
         border_size = 4
         canvas_size = self.canvas.winfo_width()
         point_size = (canvas_size - 2 * border_size) / (8 * size - 7)
@@ -88,8 +91,8 @@ class BoardFrame(ttk.Frame):
         )
 
         # Draw point grid
-        for x in range(size):
-            for y in range(size):
+        for x in range(columns + 1):
+            for y in range(rows + 1):
                 x1 = x * (spacer + point_size) + border_size
                 y1 = y * (spacer + point_size) + border_size
 
@@ -102,15 +105,16 @@ class BoardFrame(ttk.Frame):
                 )
 
         # Draw cell
-        for x in range(size - 1):
-            for y in range(size - 1):
+        cells = self.viewmodel.board.cells
+        for x in range(columns):
+            for y in range(rows):
                 x1 = x * (spacer + point_size) + border_size + point_size
                 y1 = y * (spacer + point_size) + border_size + point_size
 
                 centerx = x1 + spacer // 2
                 centery = y1 + spacer // 2
 
-                cell_val = self.viewmodel.board.cells[y][x]
+                cell_val = cells[y][x].value
 
                 if cell_val == -1:
                     self.canvas.create_text(centerx, centery, text=" ", font=font)
@@ -122,13 +126,13 @@ class BoardFrame(ttk.Frame):
                         font=font,
                         fill=colors[cell_val],
                     )
-
         # Draw edges
         for edge in self.viewmodel.board.edges:
-            x1 = edge.src.row * (spacer + point_size) + border_size
-            y1 = edge.src.column * (spacer + point_size) + border_size
-            x2 = edge.dest.row * (spacer + point_size) + border_size + point_size
-            y2 = edge.dest.column * (spacer + point_size) + border_size + point_size
+            y1 = edge.src.row * (spacer + point_size) + border_size
+            x1 = edge.src.column * (spacer + point_size) + border_size
+
+            y2 = edge.dest.row * (spacer + point_size) + border_size + point_size
+            x2 = edge.dest.column * (spacer + point_size) + border_size + point_size
             self.canvas.create_rectangle(
                 x1,
                 y1,
@@ -154,7 +158,7 @@ class ControlFrame(ttk.Frame):
         self.viewmodel.new_board_cmd(size, difficulty)
 
     def solve_board(self):
-        print("solve board cmd")
+        self.viewmodel.solve_board_cmd()
         pass
 
     def build_ui(self):
