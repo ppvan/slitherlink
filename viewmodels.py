@@ -1,6 +1,7 @@
-from models import Board, Edge, Cell
+from models import Board, Cell
 from typing import List, Callable
 import utils
+from collections import defaultdict
 import pycosat
 
 from pathlib import Path
@@ -195,6 +196,9 @@ class BoardViewModel:
 
         return self.constraints
 
+    def _validate(self):
+        pass
+
     def encode_rules(self):
         self.constraints = []
         self._cell_contraints()
@@ -232,7 +236,7 @@ class BoardViewModel:
 
         # print("new board cmd")
 
-        self.board = sample_board()
+        # self.board = sample_board()
 
         self.board_changed()
         pass
@@ -243,6 +247,8 @@ class BoardViewModel:
         m = self.board.rows
         n = self.board.columns
 
+        self.board.graph = defaultdict(list)
+
         for i in range(m):
             for j in range(n):
                 top = i * n + j + 1
@@ -251,15 +257,20 @@ class BoardViewModel:
                 right = (m + 1) * n + (j + 1) * m + i + 1
 
                 if top in clean_model:
-                    self.board.edges.append(Edge(nodes[i][j], nodes[i][j + 1]))
+                    self.board.graph[nodes[i][j]].append(nodes[i][j + 1])
+                    self.board.graph[nodes[i][j + 1]].append(nodes[i][j])
+
                 if bottom in clean_model:
-                    self.board.edges.append(Edge(nodes[i + 1][j], nodes[i + 1][j + 1]))
+                    self.board.graph[nodes[i + 1][j]].append(nodes[i + 1][j + 1])
+                    self.board.graph[nodes[i + 1][j + 1]].append(nodes[i + 1][j])
                     pass
                 if left in clean_model:
-                    self.board.edges.append(Edge(nodes[i][j], nodes[i + 1][j]))
+                    self.board.graph[nodes[i][j]].append(nodes[i + 1][j])
+                    self.board.graph[nodes[i + 1][j]].append(nodes[i][j])
                     pass
                 if right in clean_model:
-                    self.board.edges.append(Edge(nodes[i][j + 1], nodes[i + 1][j + 1]))
+                    self.board.graph[nodes[i][j + 1]].append(nodes[i + 1][j + 1])
+                    self.board.graph[nodes[i + 1][j + 1]].append(nodes[i][j + 1])
                     pass
 
     def solve_board_cmd(self):
@@ -282,7 +293,9 @@ def load_puzzles(filepath: Path | str) -> List[Board]:
 
         for line in lines:
             rows, columns, *cells_flat = [int(x) for x in line.split(" ")]
-            cell_vals = [cells_flat[slice(i, i + columns)] for i in range(rows)]
+            cell_vals = [
+                cells_flat[slice(rows * i, rows * i + columns)] for i in range(rows)
+            ]
 
             cells = []
             for row in cell_vals:
@@ -290,7 +303,6 @@ def load_puzzles(filepath: Path | str) -> List[Board]:
                 for item in row:
                     rows_cell.append(Cell(item))
                 cells.append(rows_cell)
-
             board = Board(rows, columns, cells)
             boards.append(board)
 

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, DefaultDict
+from collections import defaultdict
 
 
 @dataclass
@@ -23,6 +24,17 @@ class Node:
     left: int = 0
     right: int = 0
 
+    def __key(self):
+        return (self.row, self.column)
+
+    def __hash__(self):
+        return hash(self.__key())
+
+    def __eq__(self, other):
+        if isinstance(other, Node):
+            return self.__key() == other.__key()
+        return NotImplemented
+
 
 @dataclass
 class Edge:
@@ -40,14 +52,13 @@ class Board:
     columns: int
     nodes: List[List[Node]]
     cells: List[List[Cell]]
-    edges: List[Edge]
+    graph: DefaultDict[Node, List[Node]]
 
     def __init__(
         self,
         rows: int,
         columns: int,
         cells: List[List[Cell]] = [],
-        edges: List[Edge] = [],
     ):
         assert rows == len(cells)
         assert columns == len(cells[0])
@@ -55,5 +66,5 @@ class Board:
         self.rows = rows
         self.columns = columns
         self.cells = cells
-        self.edges = edges
+        self.graph = defaultdict(list)
         self.nodes = [[Node(i, j) for j in range(columns + 1)] for i in range(rows + 1)]
