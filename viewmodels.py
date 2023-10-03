@@ -196,8 +196,28 @@ class BoardViewModel:
 
         return self.constraints
 
-    def _validate(self):
-        pass
+    def _dfs(self, node, visited):
+        visited.append(node)
+        for neighbor in self.board.graph[node]:
+            if neighbor not in visited:
+                self._dfs(neighbor, visited)
+
+    def _validate(self, ans):
+        self._extract_solution(ans)
+
+        start = None
+        for node, neighbors in self.board.graph.items():
+            if len(neighbors) > 0:
+                start = node
+                break
+
+        visited = []
+        self._dfs(start, visited)
+
+        if len(visited) != len(self.board.graph):
+            return False
+
+        return True
 
     def encode_rules(self):
         self.constraints = []
@@ -212,13 +232,12 @@ class BoardViewModel:
 
         utils.DEBUG(len(clauses))
 
-        test_solution = pycosat.solve(clauses)
-
-        if test_solution in ["UNSAT", "UNKNOWN"]:
-            utils.DEBUG("unsat")
-            ans = []
-        else:
-            ans = test_solution
+        for test_solution in pycosat.itersolve(clauses):
+            if test_solution in ["UNSAT", "UNKNOWN"]:
+                break
+            if self._validate(test_solution):
+                ans = test_solution
+                break
 
         return ans
 
