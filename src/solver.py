@@ -29,10 +29,12 @@ class Solver:
         count = 0
         for test_solution in pycosat.itersolve(clauses):
             if test_solution in ["UNSAT", "UNKNOWN"]:
+                print("UNSATSISFIED")
                 break
             if self._validate(test_solution):
                 ans = test_solution
                 break
+            print("Not valid, trying again")
             count += 1
 
         utils.DEBUG(count)

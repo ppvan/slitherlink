@@ -1,4 +1,4 @@
-from models import Board
+from models import Board, Worker
 from solver import Solver
 from typing import List, Callable
 from utils import load_puzzles
@@ -48,15 +48,12 @@ class BoardViewModel:
         pass
 
     def solve_board_cmd(self):
-        solver = Solver(self.board)
-        solver.solve()
+        def callback(worker):
+            self.board_changed()
 
-        # print("solve board cmd")
-        # self.assign_edges_index()
-        # print("assign done")
-        # self.encode_rules()
-        # model = self._solve()
-        # self._extract_solution(model)
+        def task():
+            solver = Solver(self.board)
+            solver.solve()
 
-        self.board_changed()
-        pass
+        worker = Worker(task, callback)
+        worker.start()

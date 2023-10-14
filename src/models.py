@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import List, DefaultDict
+from typing import List, DefaultDict, Callable
 from collections import defaultdict
+from threading import Thread
 
 
 @dataclass
@@ -68,3 +69,16 @@ class Board:
         self.cells = cells
         self.graph = defaultdict(list)
         self.nodes = [[Node(i, j) for j in range(columns + 1)] for i in range(rows + 1)]
+
+
+class Worker(Thread):
+    def __init__(self, task: Callable, callback: Callable):
+        super().__init__()
+        self.setDaemon(True)
+        self.task = task
+        self.callback = callback
+
+    def run(self):
+        self.task()
+
+        self.callback(self)
