@@ -50,7 +50,7 @@ class BoardFrame(ttk.Frame):
         )
         self.bind("<Configure>", self.__configure)
 
-        self.draw_intro("assets/intro.bmp")
+        self.draw_intro("assets/intro.png")
         self.canvas.pack(side=tk.LEFT)
 
     def __configure(self, event):
