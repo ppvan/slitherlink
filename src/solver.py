@@ -66,7 +66,7 @@ class Solver:
             if self._validate(test_solution):
                 ans = test_solution
                 break
-            print("Not valid, trying again")
+            utils.DEBUG("Not valid, trying again")
             count += 1
 
         utils.DEBUG(count)

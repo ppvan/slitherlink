@@ -21,6 +21,7 @@ class Window(tk.Tk):
         x = (self.winfo_screenwidth() - width) // 2
         y = (self.winfo_screenheight() - height) // 2
         self.geometry(f"{width}x{height}+{x}+{y}")
+        self.title("SlitherLink")
 
         self.board = BoardFrame(self, self.viewmodel)
         self.board.pack(side=tk.LEFT, fill=tk.Y)
