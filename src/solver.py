@@ -2,6 +2,28 @@ from typing import List
 from collections import defaultdict
 import utils
 import pycosat
+import time
+from dataclasses import dataclass
+
+
+@dataclass
+class Statistics:
+    time: float = 0
+    clauses: int = 0
+    variables: int = 0
+    retried: int = 0
+
+    def __init__(self):
+        self.time = 0
+        self.clauses = 0
+        self.variables = 0
+        self.retried = 0
+
+    def reset(self):
+        self.time = 0
+        self.clauses = 0
+        self.variables = 0
+        self.retried = 0
 
 
 class Solver:
@@ -10,10 +32,20 @@ class Solver:
         pass
 
     def solve(self):
+        start = time.perf_counter()
+        self.stats = Statistics()
+        clauses = self.encode_rules()
+        m = self.board.rows
+        n = self.board.columns
+
         self.assign_edges_index()
-        self.encode_rules()
+        self.stats.clauses = len(clauses)
+        self.stats.variables = (m + 1) * n + (n + 1) * m
+
         model = self._solve()
         self._extract_solution(model)
+
+        self.stats.time = time.perf_counter() - start
 
     def _dfs(self, node, visited):
         visited.append(node)
@@ -38,6 +70,7 @@ class Solver:
             count += 1
 
         utils.DEBUG(count)
+        self.stats.retried = count
         return ans
 
     def _validate(self, ans):

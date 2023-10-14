@@ -30,6 +30,7 @@ class Window(tk.Tk):
 
         # subcribe when board changes
         self.viewmodel.subcribe(self.board.redraw)
+        self.viewmodel.subcribe(self.controls.update_stats)
 
     def draw_board(self):
         self.board.redraw()
@@ -150,16 +151,24 @@ class ControlFrame(ttk.Frame):
         self.viewmodel = viewmodel
 
         self.board_size = tk.StringVar()
-        self.difficulty = tk.StringVar()
+        self.time = tk.StringVar(value="0.00 s")
+        self.clauses = tk.StringVar(value="0")
+        self.variables = tk.StringVar(value="0")
 
         self.build_ui()
 
     def new_board(self):
-        size, difficulty = self.board_size.get(), self.difficulty.get()
-        self.viewmodel.new_board_cmd(size, difficulty)
+        size = self.board_size.get()
+        self.viewmodel.new_board_cmd(size)
 
     def solve_board(self):
         self.viewmodel.solve_board_cmd()
+        pass
+
+    def update_stats(self):
+        self.time.set(f"{self.viewmodel.stats.time:.2f} s")
+        self.clauses.set(f"{self.viewmodel.stats.clauses}")
+        self.variables.set(f"{self.viewmodel.stats.variables}")
         pass
 
     def build_ui(self):
@@ -178,19 +187,27 @@ class ControlFrame(ttk.Frame):
         combox1.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
 
         row2 = ttk.Frame(option_fr)
-        label2 = ttk.Label(row2, text="Difficulty", width=12)
-        combox2 = ttk.Combobox(
-            row2,
-            values=BoardViewModel.DIFFICULTY,
-            textvariable=self.difficulty,
-            state="readonly",
-        )
-        combox2.current(0)
+        label2 = ttk.Label(row2, text="Time", width=12)
+        timelabel = ttk.Label(row2, text="0", textvariable=self.time)
         label2.pack(side=tk.LEFT, padx=4, pady=2)
-        combox2.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
+        timelabel.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
+
+        row3 = ttk.Frame(option_fr)
+        label3 = ttk.Label(row3, text="Clauses", width=12)
+        label3_val = ttk.Label(row3, text="0", textvariable=self.clauses)
+        label3.pack(side=tk.LEFT, padx=4, pady=2)
+        label3_val.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
+
+        row4 = ttk.Frame(option_fr)
+        label4 = ttk.Label(row4, text="Variables", width=12)
+        label4_val = ttk.Label(row4, text="0", textvariable=self.variables)
+        label4.pack(side=tk.LEFT, padx=4, pady=2)
+        label4_val.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
 
         row1.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row2.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
+        row3.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
+        row4.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         option_fr.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
 
         spacer = ttk.Frame(self)
