@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, MutableSet
 from collections import defaultdict
 import utils
 import pycosat
@@ -32,7 +32,7 @@ class Solver:
         self.board = board
         pass
 
-    def solve(self):
+    def solve(self) -> Board:
         self.assign_edges_index()
 
         self.stats = Statistics()
@@ -41,28 +41,32 @@ class Solver:
         ans = []
 
         start = time.perf_counter()
+
         for test_solution in pycosat.itersolve(clauses):
             if test_solution in ["UNSAT", "UNKNOWN"]:
                 print("UNSATSISFIED")
-                break
+                return self.board
 
             if self._validate(test_solution):
                 ans = test_solution
-                break
+                self._extract_solution(ans)
+                m = self.board.rows
+                n = self.board.columns
+                self.stats.clauses = len(clauses)
+                self.stats.variables = (m + 1) * n + (n + 1) * m
+                self.stats.time = time.perf_counter() - start
+                self.stats.retried = count
 
-            # utils.DEBUG("Not valid, trying again")
+                self.board.stats = self.stats
+                self.board.solved = True
+
+                return self.board
             count += 1
 
-        self._extract_solution(ans)
-        m = self.board.rows
-        n = self.board.columns
-        self.stats.clauses = len(clauses)
-        self.stats.variables = (m + 1) * n + (n + 1) * m
-        self.stats.time = time.perf_counter() - start
-        self.stats.retried = count
+        return self.board
 
-    def _dfs(self, node: Node, visited: List[Node]):
-        visited.append(node)
+    def _dfs(self, node: Node, visited: MutableSet[Node]):
+        visited.add(node)
         for neighbor in self.board.graph[node]:
             if neighbor not in visited:
                 self._dfs(neighbor, visited)
@@ -76,7 +80,7 @@ class Solver:
                 start = node
                 break
 
-        visited = []
+        visited = set()
         self._dfs(start, visited)
 
         if len(visited) != len(self.board.graph):
@@ -111,9 +115,9 @@ class Solver:
 
     def _extract_solution(self, model: List[int]):
         nodes = self.board.nodes
-        clean_model = [x for x in model if x > 0]
         m = self.board.rows
         n = self.board.columns
+        clean_model = frozenset(x for x in model if x > 0)
 
         self.board.graph = defaultdict(list)
 

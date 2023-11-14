@@ -1,7 +1,9 @@
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import List, DefaultDict, Callable
 from collections import defaultdict
 from threading import Thread
+from functools import cache
 
 
 @dataclass
@@ -14,6 +16,26 @@ class Cell:
     left: int = 0
     right: int = 0
 
+    def __copy__(self):
+        # Create a new instance of the Cell class with the same values
+        return Cell(
+            value=self.value,
+            top=self.top,
+            bottom=self.bottom,
+            left=self.left,
+            right=self.right,
+        )
+
+    def __deepcopy__(self, memo):
+        # Create a deep copy of the Cell class
+        return Cell(
+            value=deepcopy(self.value, memo),
+            top=deepcopy(self.top, memo),
+            bottom=deepcopy(self.bottom, memo),
+            left=deepcopy(self.left, memo),
+            right=deepcopy(self.right, memo),
+        )
+
 
 @dataclass
 class Node:
@@ -25,16 +47,36 @@ class Node:
     left: int = 0
     right: int = 0
 
-    def __key(self):
-        return (self.row, self.column)
-
     def __hash__(self):
-        return hash(self.__key())
+        return self.row * 31 + self.column
 
     def __eq__(self, other):
-        if isinstance(other, Node):
-            return self.__key() == other.__key()
-        return NotImplemented
+        if self is other:
+            return True
+        else:
+            return self.column == other.column and self.row == other.row
+
+    def __copy__(self):
+        # Create a new instance of the Node class with the same values
+        return Node(
+            row=self.row,
+            column=self.column,
+            top=self.top,
+            bottom=self.bottom,
+            left=self.left,
+            right=self.right,
+        )
+
+    def __deepcopy__(self, memo):
+        # Create a deep copy of the Node class
+        return Node(
+            row=deepcopy(self.row, memo),
+            column=deepcopy(self.column, memo),
+            top=deepcopy(self.top, memo),
+            bottom=deepcopy(self.bottom, memo),
+            left=deepcopy(self.left, memo),
+            right=deepcopy(self.right, memo),
+        )
 
 
 @dataclass
@@ -69,6 +111,14 @@ class Board:
         self.cells = cells
         self.graph = defaultdict(list)
         self.nodes = [[Node(i, j) for j in range(columns + 1)] for i in range(rows + 1)]
+        self.solved = False
+
+    def deep_copy(self):
+        cells = deepcopy(self.cells)
+        # Create a new instance of the Board class
+        new_board = Board(rows=self.rows, columns=self.columns, cells=cells)
+
+        return new_board
 
 
 class Worker(Thread):
