@@ -42,6 +42,7 @@ class Solver:
 
         start = time.perf_counter()
 
+        # TODO itersolve is empty with 25x30
         for test_solution in pycosat.itersolve(clauses):
             if test_solution in ["UNSAT", "UNKNOWN"]:
                 print("UNSATSISFIED")

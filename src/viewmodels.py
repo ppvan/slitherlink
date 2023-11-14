@@ -52,15 +52,20 @@ class BoardViewModel:
                 executor.submit(solver.solve): solver for solver in slaves
             }
 
+            concurrent.futures.wait(
+                solver_futures.keys(),
+                timeout=3,
+                return_when=concurrent.futures.FIRST_COMPLETED,
+            )
+
             for future in concurrent.futures.as_completed(solver_futures):
                 completed_board = future.result()
                 self.stats = completed_board.stats
                 self.board = completed_board
 
                 # Cancel the remaining futures
-                for remaining_future in solver_futures:
-                    if remaining_future != future:
-                        remaining_future.cancel()
+                for _ in concurrent.futures.as_completed(solver_futures.keys()):
+                    executor.shutdown(wait=False, cancel_futures=True)
 
                 break
 
