@@ -155,6 +155,7 @@ class ControlFrame(ttk.Frame):
         self.time = tk.StringVar(value="0.00 s")
         self.clauses = tk.StringVar(value="0")
         self.variables = tk.StringVar(value="0")
+        self.retried = tk.StringVar(value="0")
 
         self.build_ui()
 
@@ -170,6 +171,7 @@ class ControlFrame(ttk.Frame):
         self.time.set(f"{self.viewmodel.stats.time:.2f} s")
         self.clauses.set(f"{self.viewmodel.stats.clauses}")
         self.variables.set(f"{self.viewmodel.stats.variables}")
+        self.retried.set(f"{self.viewmodel.stats.retried}")
         pass
 
     def build_ui(self):
@@ -205,10 +207,17 @@ class ControlFrame(ttk.Frame):
         label4.pack(side=tk.LEFT, padx=4, pady=2)
         label4_val.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
 
+        row5 = ttk.Frame(option_fr)
+        label5 = ttk.Label(row5, text="Retried", width=12)
+        label5_val = ttk.Label(row5, text="0", textvariable=self.retried)
+        label5.pack(side=tk.LEFT, padx=4, pady=2)
+        label5_val.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
+
         row1.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row2.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row3.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row4.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
+        row5.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         option_fr.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
 
         spacer = ttk.Frame(self)

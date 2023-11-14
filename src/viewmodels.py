@@ -45,14 +45,12 @@ class BoardViewModel:
         pass
 
     def solve_board_cmd(self):
-        def callback(worker):
-            print(self.stats)
-            self.board_changed()
-
         def task():
             solver = Solver(self.board)
             solver.solve()
             self.stats = solver.stats
+            print(self.stats)
+            self.board_changed()
 
-        worker = Worker(task, callback)
+        worker = Worker(task)
         worker.start()

@@ -4,6 +4,7 @@ import utils
 import pycosat
 import time
 from dataclasses import dataclass
+from models import Board, Node
 
 
 @dataclass
@@ -27,51 +28,44 @@ class Statistics:
 
 
 class Solver:
-    def __init__(self, board):
+    def __init__(self, board: Board):
         self.board = board
         pass
 
     def solve(self):
-        start = time.perf_counter()
+        self.assign_edges_index()
+
         self.stats = Statistics()
         clauses = self.encode_rules()
-        m = self.board.rows
-        n = self.board.columns
-
-        self.assign_edges_index()
-        self.stats.clauses = len(clauses)
-        self.stats.variables = (m + 1) * n + (n + 1) * m
-
-        model = self._solve()
-        self._extract_solution(model)
-
-        self.stats.time = time.perf_counter() - start
-
-    def _dfs(self, node, visited):
-        visited.append(node)
-        for neighbor in self.board.graph[node]:
-            if neighbor not in visited:
-                self._dfs(neighbor, visited)
-
-    def _solve(self):
-        clauses = self.encode_rules()
+        count = 0
         ans = []
 
-        utils.DEBUG(len(clauses))
-        count = 0
+        start = time.perf_counter()
         for test_solution in pycosat.itersolve(clauses):
             if test_solution in ["UNSAT", "UNKNOWN"]:
                 print("UNSATSISFIED")
                 break
+
             if self._validate(test_solution):
                 ans = test_solution
                 break
-            utils.DEBUG("Not valid, trying again")
+
+            # utils.DEBUG("Not valid, trying again")
             count += 1
 
-        utils.DEBUG(count)
+        self._extract_solution(ans)
+        m = self.board.rows
+        n = self.board.columns
+        self.stats.clauses = len(clauses)
+        self.stats.variables = (m + 1) * n + (n + 1) * m
+        self.stats.time = time.perf_counter() - start
         self.stats.retried = count
-        return ans
+
+    def _dfs(self, node: Node, visited: List[Node]):
+        visited.append(node)
+        for neighbor in self.board.graph[node]:
+            if neighbor not in visited:
+                self._dfs(neighbor, visited)
 
     def _validate(self, ans):
         self._extract_solution(ans)

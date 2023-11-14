@@ -72,13 +72,10 @@ class Board:
 
 
 class Worker(Thread):
-    def __init__(self, task: Callable, callback: Callable):
+    def __init__(self, task: Callable):
         super().__init__()
         self.setDaemon(True)
         self.task = task
-        self.callback = callback
 
     def run(self):
         self.task()
-
-        self.callback(self)
