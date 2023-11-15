@@ -17,7 +17,7 @@ def do_word(size: str):
         solver_futures = {executor.submit(solver.solve): solver for solver in slaves}
 
         for future in concurrent.futures.as_completed(solver_futures):
-            completed_board = future.result()
+            completed_board = future.result(timeout=100)
             if completed_board.solved:
                 print(
                     completed_board.stats, completed_board.rows, completed_board.columns
