@@ -152,7 +152,7 @@ class ControlFrame(ttk.Frame):
         self.viewmodel = viewmodel
 
         self.board_size = tk.StringVar()
-        self.time = tk.StringVar(value="0.00 s")
+        self.time = tk.StringVar(value="0.000 ms")
         self.clauses = tk.StringVar(value="0")
         self.variables = tk.StringVar(value="0")
         self.retried = tk.StringVar(value="0")
@@ -168,7 +168,7 @@ class ControlFrame(ttk.Frame):
         pass
 
     def update_stats(self):
-        self.time.set(f"{self.viewmodel.stats.time:.2f} s")
+        self.time.set(f"{(self.viewmodel.stats.time * 1000):.2f} ms")
         self.clauses.set(f"{self.viewmodel.stats.clauses}")
         self.variables.set(f"{self.viewmodel.stats.variables}")
         self.retried.set(f"{self.viewmodel.stats.retried}")
