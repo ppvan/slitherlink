@@ -21,6 +21,9 @@ def sample_board():
         [3, -1, 3, 3, -1],
     ]
 
-    cells = [[Cell(val) for val in row_vals] for row_vals in cell_vals]
+    cells = [
+        [Cell(value=val, row=i, column=j) for j, val in enumerate(row_vals)]
+        for i, row_vals in enumerate(cell_vals)
+    ]
 
     return Board(size, size, cells)

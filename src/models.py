@@ -7,6 +7,8 @@ from collections import defaultdict
 @dataclass
 class Cell:
     value: int
+    row: int
+    column: int
 
     # neighbors edges
     top: int = 0
@@ -22,7 +24,12 @@ class Cell:
             bottom=self.bottom,
             left=self.left,
             right=self.right,
+            row=self.row,
+            column=self.column,
         )
+
+    def __hash__(self):
+        return self.row * 31 + self.column
 
     def __deepcopy__(self, memo):
         # Create a deep copy of the Cell class
@@ -32,6 +39,8 @@ class Cell:
             bottom=deepcopy(self.bottom, memo),
             left=deepcopy(self.left, memo),
             right=deepcopy(self.right, memo),
+            row=deepcopy(self.row),
+            column=deepcopy(self.column),
         )
 
 

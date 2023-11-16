@@ -29,10 +29,10 @@ def load_puzzles(filepath: Path | str) -> List[Board]:
             ]
 
             cells = []
-            for row in cell_vals:
+            for i, row in enumerate(cell_vals):
                 rows_cell = []
-                for item in row:
-                    rows_cell.append(Cell(item))
+                for j, item in enumerate(row):
+                    rows_cell.append(Cell(value=item, row=i, column=j))
                 cells.append(rows_cell)
             board = Board(rows, columns, cells)
             boards.append(board)
