@@ -1,8 +1,8 @@
 from typing import List, MutableSet
 from collections import defaultdict
-import utils
 import pycosat
 import time
+import sys
 from dataclasses import dataclass
 from models import Board, Node
 
@@ -36,6 +36,7 @@ class Solver:
         self.assign_edges_index()
 
         self.stats = Statistics()
+        self.board.stats = self.stats
         clauses = self.encode_rules()
         count = 0
         ans = []
@@ -57,12 +58,12 @@ class Solver:
                 self.stats.variables = (m + 1) * n + (n + 1) * m
                 self.stats.time = time.perf_counter() - start
                 self.stats.retried = count
-
-                self.board.stats = self.stats
                 self.board.solved = True
 
                 return self.board
             count += 1
+
+        print("UNSAT")
 
         return self.board
 
@@ -104,14 +105,17 @@ class Solver:
 
         for i in range(m + 1):
             for j in range(n + 1):
-                nodes[i][j].left = i * n + j
-                nodes[i][j].right = i * n + j + 1
-                nodes[i][j].top = (m + 1) * n + j * m + i
-                nodes[i][j].bottom = (m + 1) * n + j * m + i + 1
+                nodes[i][j].left = i * n + j if j > 0 else 0
+                nodes[i][j].right = i * n + j + 1 if j < n else 0
+                nodes[i][j].top = (m + 1) * n + j * m + i if i > 0 else 0
+                nodes[i][j].bottom = (m + 1) * n + j * m + i + 1 if i < m else 0
+                # nodes[i][j].left = i * n + j
+                # nodes[i][j].right = i * n + j + 1
+                # nodes[i][j].top = (m + 1) * n + j * m + i
+                # nodes[i][j].bottom = (m + 1) * n + j * m + i + 1
 
     def encode_rules(self):
-        self.contraints = self._cell_contraints() + self._loop_contraints()
-
+        self.contraints = self._cell_contraints() + self._node_contraints()
         return self.contraints
 
     def _extract_solution(self, model: List[int]):
@@ -147,61 +151,6 @@ class Solver:
                     pass
 
     def _cell_contraints(self):
-        def zero(e1, e2, e3, e4):
-            """
-            All e1, e2, e3 and e4 must be false.
-            """
-            return [[-e1], [-e2], [-e3], [-e4]]
-
-        def one(e1, e2, e3, e4):
-            """
-            The "exactly one" constraint can be expressed as
-            * Amongst any two of booleans, at least one must be false.
-            * Atleast one of the booleans is true.
-            """
-            return [
-                [-e1, -e2],
-                [-e1, -e3],
-                [-e1, -e4],
-                [-e2, -e3],
-                [-e2, -e4],
-                [-e3, -e4],
-                [e1, e2, e3, e4],
-            ]
-
-        def two(e1, e2, e3, e4):
-            """
-            Amongst any three booleans, at least one must be true,
-            and atleast one must be false.
-            """
-            return [
-                [e2, e3, e4],
-                [e1, e3, e4],
-                [e1, e2, e4],
-                [e1, e2, e3],
-                [-e2, -e3, -e4],
-                [-e1, -e3, -e4],
-                [-e1, -e2, -e4],
-                [-e1, -e2, -e3],
-            ]
-
-        def three(e1, e2, e3, e4):
-            """
-            Amongst any two booleans, at least one must be true. This ensures
-            that there are at least three true booleans.
-            Also add a clause that ensures at least one of them must be false.
-            Together they ensure the "exactly three correct"
-            """
-            return [
-                [e1, e2],
-                [e1, e3],
-                [e1, e4],
-                [e2, e3],
-                [e2, e4],
-                [e3, e4],
-                [-e1, -e2, -e3, -e4],
-            ]
-
         atmosts = [zero, one, two, three]
         constraints = []
         for i in range(self.board.rows):
@@ -217,80 +166,102 @@ class Solver:
                     constraints.extend(cnf)
         return constraints
 
-    def _loop_contraints(self):
+    def _node_contraints(self):
         constraints = []
-        for i in range(1, self.board.rows):
-            for j in range(1, self.board.columns):
+        for i in range(self.board.rows + 1):
+            for j in range(self.board.columns + 1):
                 node = self.board.nodes[i][j]
                 e1, e2, e3, e4 = [node.top, node.right, node.bottom, node.left]
-
-                constraints.extend(
-                    [
-                        [-e1, -e2, -e3],
-                        [-e1, -e2, -e4],
-                        [-e1, -e3, -e4],
-                        [-e2, -e3, -e4],
-                        [-e1, e2, e3, e4],
-                        [e1, -e2, e3, e4],
-                        [e1, e2, -e3, e4],
-                        [e1, e2, e3, -e4],
-                    ]
-                )
-        # exit(0)
-
-        # outer nodes
-        for j in range(1, self.board.columns):
-            node = self.board.nodes[0][j]
-            e1, e2, e3, e4 = [node.top, node.right, node.bottom, node.left]
-            constraints.extend(
-                [[-e2, e3, e4], [e2, -e3, e4], [e2, e3, -e4], [-e2, -e3, -e4]]
-            )
-
-            node = self.board.nodes[self.board.rows][j]
-            e1, e2, e3, e4 = [node.top, node.right, node.bottom, node.left]
-            constraints.extend(
-                [[-e1, e2, e4], [e1, -e2, e4], [e1, e2, -e4], [-e1, -e2, -e4]]
-            )
-
-        for i in range(1, self.board.rows):
-            node = self.board.nodes[i][0]
-            e1, e2, e3, e4 = [node.top, node.right, node.bottom, node.left]
-            constraints.extend(
-                [[-e1, e2, e3], [e1, -e2, e3], [e1, e2, -e3], [-e1, -e2, -e3]]
-            )
-
-            node = self.board.nodes[i][self.board.columns]
-            e1, e2, e3, e4 = [node.top, node.right, node.bottom, node.left]
-            constraints.extend(
-                [[-e1, e3, e4], [e1, -e3, e4], [e1, e3, -e4], [-e1, -e3, -e4]]
-            )
-
-        # conner nodes
-        topleft = self.board.nodes[0][0]
-        topright = self.board.nodes[0][self.board.columns]
-        bottomleft = self.board.nodes[self.board.rows][0]
-        bottomright = self.board.nodes[self.board.rows][self.board.columns]
-
-        e1, e2, e3, e4 = [topleft.top, topleft.right, topleft.bottom, topleft.left]
-        constraints.extend([[-e2, e3], [e2, -e3]])
-
-        e1, e2, e3, e4 = [topright.top, topright.right, topright.bottom, topright.left]
-        constraints.extend([[-e4, e3], [e4, -e3]])
-
-        e1, e2, e3, e4 = [
-            bottomleft.top,
-            bottomleft.right,
-            bottomleft.bottom,
-            bottomleft.left,
-        ]
-        constraints.extend([[-e2, e1], [e2, -e1]])
-
-        e1, e2, e3, e4 = [
-            bottomright.top,
-            bottomright.right,
-            bottomright.bottom,
-            bottomright.left,
-        ]
-        constraints.extend([[-e4, e1], [e4, -e1]])
+                constraints.extend(zero_or_two(e1, e2, e3, e4))
 
         return constraints
+
+
+def zero(e1, e2, e3, e4):
+    """
+    All e1, e2, e3 and e4 must be false.
+    """
+    return [[-e1], [-e2], [-e3], [-e4]]
+
+
+def one(e1, e2, e3, e4):
+    """
+    The "exactly one" constraint can be expressed as
+    * Amongst any two of booleans, at least one must be false.
+    * Atleast one of the booleans is true.
+    """
+    return [
+        [-e1, -e2],
+        [-e1, -e3],
+        [-e1, -e4],
+        [-e2, -e3],
+        [-e2, -e4],
+        [-e3, -e4],
+        [e1, e2, e3, e4],
+    ]
+
+
+def two(e1, e2, e3, e4):
+    """
+    Amongst any three booleans, at least one must be true,
+    and atleast one must be false.
+    """
+    return [
+        [e2, e3, e4],
+        [e1, e3, e4],
+        [e1, e2, e4],
+        [e1, e2, e3],
+        [-e2, -e3, -e4],
+        [-e1, -e3, -e4],
+        [-e1, -e2, -e4],
+        [-e1, -e2, -e3],
+    ]
+
+
+def three(e1, e2, e3, e4):
+    """
+    Amongst any two booleans, at least one must be true. This ensures
+    that there are at least three true booleans.
+    Also add a clause that ensures at least one of them must be false.
+    Together they ensure the "exactly three correct"
+    """
+    return [
+        [e1, e2],
+        [e1, e3],
+        [e1, e4],
+        [e2, e3],
+        [e2, e4],
+        [e3, e4],
+        [-e1, -e2, -e3, -e4],
+    ]
+
+
+def zero_or_two(e1, e2, e3, e4):
+    true = sys.maxsize
+    false = -true
+    edges = []
+    for item in [e1, e2, e3, e4]:
+        if item == 0:
+            edges.append(false)
+        else:
+            edges.append(item)
+    e1, e2, e3, e4 = edges
+    generic_contraints = [
+        [-e1, -e2, -e3],
+        [-e1, -e2, -e4],
+        [-e1, -e3, -e4],
+        [-e2, -e3, -e4],
+        [-e1, e2, e3, e4],
+        [e1, -e2, e3, e4],
+        [e1, e2, -e3, e4],
+        [e1, e2, e3, -e4],
+    ]
+
+    contraints = []
+    for row in generic_contraints:
+        if true in row:
+            continue
+
+        contraints.append([x for x in row if x != false])
+
+    return contraints

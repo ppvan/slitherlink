@@ -1,29 +1,18 @@
-import unittest
-from models import Board, Cell, Node
+from solver import zero_or_two
 
 
-class TestBoardMethods(unittest.TestCase):
-    def test_deep_copy(self):
-        # Create a sample board
-        cells = [
-            [Cell(1), Cell(2), Cell(3)],
-            [Cell(4), Cell(5), Cell(6)],
-            [Cell(7), Cell(8), Cell(9)],
-        ]
+ans = zero_or_two(-1, 2, 3, -1)
 
-        original_board = Board(rows=3, columns=3, cells=cells)
+for item in ans:
+    print(item)
 
-        # Make a deep copy
-        copied_board = original_board.deep_copy()
-
-        # Ensure they are not the same object
-        self.assertIsNot(original_board, copied_board)
-
-        # Ensure attributes are equal
-        self.assertEqual(original_board.rows, copied_board.rows)
-        self.assertEqual(original_board.columns, copied_board.columns)
-        self.assertEqual(original_board.cells, copied_board.cells)
-
-
-if __name__ == "__main__":
-    unittest.main()
+"""
+[[-1, -2, -3],
+[-1, -2, -4],
+[-1, -3, -4],
+[-2, -3, -4],
+[-1, 2, 3, 4],
+[1, -2, 3, 4],
+[1, 2, -3, 4],
+[1, 2, 3, -4]]
+"""
