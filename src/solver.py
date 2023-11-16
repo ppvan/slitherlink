@@ -115,7 +115,9 @@ class Solver:
                 # nodes[i][j].bottom = (m + 1) * n + j * m + i + 1
 
     def encode_rules(self):
-        self.contraints = self._cell_contraints() + self._node_contraints()
+        self.contraints = (
+            self._cell_contraints() + self._node_contraints() + self._corners_rules()
+        )
         return self.contraints
 
     def _extract_solution(self, model: List[int]):
@@ -175,6 +177,49 @@ class Solver:
                 constraints.extend(zero_or_two(e1, e2, e3, e4))
 
         return constraints
+
+    def _heuristic_rules(self):
+        contraints = []
+
+        pass
+
+    def _corners_rules(self):
+        """https://en.wikipedia.org/wiki/Slitherlink?useskin=vector#Corners"""
+        contraints = []
+        corners = [
+            self.board.cells[0][0],
+            self.board.cells[0][self.board.columns - 1],
+            self.board.cells[self.board.rows - 1][0],
+            self.board.cells[self.board.rows - 1][self.board.columns - 1],
+        ]
+        cornerlines = [
+            [
+                self.board.cells[0][0].top,
+                self.board.cells[0][0].left,
+            ],
+            [
+                self.board.cells[0][self.board.columns - 1].top,
+                self.board.cells[0][self.board.columns - 1].right,
+            ],
+            [
+                self.board.cells[self.board.rows - 1][0].bottom,
+                self.board.cells[self.board.rows - 1][0].left,
+            ],
+            [
+                self.board.cells[self.board.rows - 1][self.board.columns - 1].bottom,
+                self.board.cells[self.board.rows - 1][self.board.columns - 1].right,
+            ],
+        ]
+
+        for index, corner in enumerate(corners):
+            if corner.value == 1:
+                contraints.extend([[-line] for line in cornerlines[index]])
+            elif corner.value == 3:
+                contraints.extend([[line] for line in cornerlines[index]])
+            else:
+                pass
+
+        return contraints
 
 
 def zero(e1, e2, e3, e4):
