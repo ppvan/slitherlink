@@ -1,6 +1,7 @@
 from solver import Solver, Statistics
 from viewmodels import BoardViewModel
 from models import Board
+from repository import BoardRepository
 from typing import Tuple
 import concurrent.futures
 
@@ -8,37 +9,22 @@ BOARD_SIZES = ["5x5", "7x7", "10x10", "15x15", "20x20", "25x30"]
 
 
 def do_word(size: str):
-    viewmodel = BoardViewModel()
+    repository = BoardRepository()
+    viewmodel = BoardViewModel(repository)
     viewmodel.new_board_cmd(size)
 
-    slaves = [Solver(viewmodel.board.deep_copy()) for _ in range(8)]
+    solver = Solver(viewmodel.board)
 
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        solver_futures = {executor.submit(solver.solve): solver for solver in slaves}
+    board = solver.solve()
 
-        for future in concurrent.futures.as_completed(solver_futures):
-            completed_board = future.result(timeout=100)
-            if completed_board.solved:
-                print(
-                    completed_board.stats, completed_board.rows, completed_board.columns
-                )
-            else:
-                pass
-
-            # Cancel the remaining futures
-            for remaining_future in solver_futures:
-                if remaining_future != future:
-                    remaining_future.cancel()
-
-            break
+    if board.solved:
+        print(board.stats)
+    else:
+        print("UNSATSISFIED")
 
 
 if __name__ == "__main__":
-    for size in BOARD_SIZES[:-1]:
-        do_word(size)
-
-    # Bug
-    do_word("25x30")
+    do_word("20x20")
 
 # $ python src/evaluation.py
 # Statistics(time=0.0009233029995812103, clauses=282, variables=60, retried=3) 5 5

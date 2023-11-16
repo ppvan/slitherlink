@@ -1,7 +1,8 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import List, DefaultDict
+from typing import List, DefaultDict, FrozenSet
 from collections import defaultdict
+from functools import cache
 
 
 @dataclass
@@ -15,6 +16,9 @@ class Cell:
     bottom: int = 0
     left: int = 0
     right: int = 0
+
+    def edges(self) -> FrozenSet[int]:
+        return frozenset([self.top, self.bottom, self.left, self.right])
 
     def __copy__(self):
         # Create a new instance of the Cell class with the same values
@@ -54,8 +58,13 @@ class Node:
     left: int = 0
     right: int = 0
 
+    _hash: int = 0
+
     def __hash__(self):
-        return self.row * 31 + self.column
+        if self._hash == 0:
+            self._hash = self.row * 31 + self.column + 1
+
+        return self._hash
 
     def __eq__(self, other):
         if self is other:

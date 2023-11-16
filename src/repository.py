@@ -12,7 +12,8 @@ class BoardRepository:
         self.database_path = filepath
 
     def find_all(self):
-        return load_puzzles(self.database_path)
+        all_puzzles = load_puzzles(self.database_path)
+        return all_puzzles
 
 
 @cache

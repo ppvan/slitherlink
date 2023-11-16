@@ -74,6 +74,12 @@ class Solver:
                 self._dfs(neighbor, visited)
 
     def _validate(self, ans):
+        models = frozenset(x for x in ans if x > 0)
+        for row in self.board.cells:
+            for cell in row:
+                if cell.edges().issubset(models):
+                    return False
+
         self._extract_solution(ans)
 
         start = None
@@ -180,7 +186,18 @@ class Solver:
 
     def _heuristic_rules(self):
         contraints = []
-
+        for i in range(1, self.board.rows - 1):
+            for j in range(1, self.board.columns - 1):
+                cell = self.board.cells[i][j]
+                _e1, e2, e3, _e4 = [cell.top, cell.right, cell.bottom, cell.left]
+                if cell.value == -1:
+                    continue
+                else:
+                    if cell.value == 1:
+                        tl_cell = self.board.cells[i - 1][j - 1]
+                        e5, e6 = tl_cell.right, tl_cell.bottom
+                        cnf = [[e5, -e6, -e2], [e5, -e6, -e3]]
+                    contraints.extend(cnf)
         pass
 
     def _corners_rules(self):
