@@ -45,6 +45,7 @@ class Solver:
 
         # TODO itersolve is empty with 25x30
         for test_solution in pycosat.itersolve(clauses):
+            print(f"{count}")
             if test_solution in ["UNSAT", "UNKNOWN"]:
                 print("UNSATSISFIED")
                 return self.board
@@ -165,6 +166,8 @@ class Solver:
             for j in range(self.board.columns):
                 cell = self.board.cells[i][j]
                 if cell.value == -1:
+                    cnf = [[-cell.top, -cell.bottom, -cell.left, -cell.right]]
+                    constraints.extend(cnf)
                     continue
                 else:
                     cnf = atmosts[cell.value](
