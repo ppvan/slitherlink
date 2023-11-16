@@ -14,13 +14,15 @@ class BoardViewModel:
     stats: Statistics
 
     BOARD_SIZES = ["5x5", "7x7", "10x10", "15x15", "20x20", "25x30"]
+    DIFFICULTY = ["normal", "hard"]
+    NO_PUZZLES = ["Random"] + [str(i + 1) for i in range(10)]
 
     def __init__(self, repo: BoardRepository, board: Board = None):  # type: ignore
         self.repo = repo
         self.board = board
 
         self.subcribers = []
-        self.puzzles = repo.find_all()
+        self.puzzles = repo.find_all(size="5x5", diff="normal")
         self.stats = Statistics()
 
     def subcribe(self, callback):
@@ -30,19 +32,20 @@ class BoardViewModel:
         for subscriber in self.subcribers:
             subscriber()
 
-    def new_board_cmd(self, size: str, index=None):
+    def new_board_cmd(self, size: str, difficulty: str, index="Random"):
         """size in one of BOARD_SIZE."""
         assert size in BoardViewModel.BOARD_SIZES
+        assert difficulty in BoardViewModel.DIFFICULTY
+        assert index in BoardViewModel.NO_PUZZLES
 
         columns, rows = [int(x) for x in size.split("x")]
-        candiates = []
+        candiates = self.repo.find_all(size=size, diff=difficulty)
 
-        for board in self.puzzles:
-            if board.rows == rows and board.columns == columns:
-                candiates.append(board)
-
-        if index is None:
+        if index == "Random":
             index = random.randint(0, len(candiates) - 1)
+        else:
+            index = int(index) - 1
+
         self.board = candiates[index]
         self.stats.reset()
 

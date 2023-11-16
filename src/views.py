@@ -152,6 +152,8 @@ class ControlFrame(ttk.Frame):
         self.viewmodel = viewmodel
 
         self.board_size = tk.StringVar()
+        self.difficulty = tk.StringVar()
+        self.index = tk.StringVar()
         self.time = tk.StringVar(value="0.000 ms")
         self.clauses = tk.StringVar(value="0")
         self.variables = tk.StringVar(value="0")
@@ -161,7 +163,9 @@ class ControlFrame(ttk.Frame):
 
     def new_board(self):
         size = self.board_size.get()
-        self.viewmodel.new_board_cmd(size)
+        diff = self.difficulty.get()
+        index = self.index.get()
+        self.viewmodel.new_board_cmd(size, diff, index)
 
     def solve_board(self):
         self.viewmodel.solve_board_cmd()
@@ -189,6 +193,30 @@ class ControlFrame(ttk.Frame):
         label1.pack(side=tk.LEFT, padx=4, pady=2)
         combox1.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
 
+        row10 = ttk.Frame(option_fr)
+        label10 = ttk.Label(row10, text="Difficulty", width=12)
+        combox10 = ttk.Combobox(
+            row10,
+            values=BoardViewModel.DIFFICULTY,
+            state="readonly",
+            textvariable=self.difficulty,
+        )
+        combox10.current(0)
+        label10.pack(side=tk.LEFT, padx=4, pady=2)
+        combox10.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
+
+        row11 = ttk.Frame(option_fr)
+        label11 = ttk.Label(row11, text="Puzzle Index", width=12)
+        combox11 = ttk.Combobox(
+            row11,
+            values=BoardViewModel.NO_PUZZLES,
+            state="readonly",
+            textvariable=self.index,
+        )
+        combox11.current(0)
+        label11.pack(side=tk.LEFT, padx=4, pady=2)
+        combox11.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
+
         row2 = ttk.Frame(option_fr)
         label2 = ttk.Label(row2, text="Time", width=12)
         timelabel = ttk.Label(row2, text="0", textvariable=self.time)
@@ -214,6 +242,8 @@ class ControlFrame(ttk.Frame):
         label5_val.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
 
         row1.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
+        row10.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
+        row11.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row2.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row3.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row4.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)

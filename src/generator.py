@@ -70,6 +70,7 @@ def parse_puzzle(text: str) -> str:
 #        12 = special weekly loop
 #        14 = special monthly loop
 difficulty_map = {
+    0: "5x5 normal",
     4: "5x5 hard",
     10: "7x7 normal",
     11: "7x7 hard",

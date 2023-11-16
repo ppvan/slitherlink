@@ -9,7 +9,6 @@ class Application:
     def __init__(self):
         # board = sample_board()
         self.repository = BoardRepository()
-        self.repository.config(DB_PATH)
 
         self.board_viewmodel = BoardViewModel(self.repository)
         self.window = Window((1200, 800), self.board_viewmodel)

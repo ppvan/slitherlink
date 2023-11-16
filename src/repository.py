@@ -3,17 +3,15 @@ from pathlib import Path
 from typing import List
 from functools import cache
 
+DB_DIR = "data"
+
 
 class BoardRepository:
     def __init__(self):
         self.database_path = "puzzles.txt"
 
-    def config(self, filepath: Path | str):
-        self.database_path = filepath
-
-    def find_all(self):
-        all_puzzles = load_puzzles(self.database_path)
-        return all_puzzles
+    def find_all(self, size, diff):
+        return load_puzzles(f"{DB_DIR}/puzzle_{size} {diff}.txt")
 
 
 @cache
