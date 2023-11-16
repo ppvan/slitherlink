@@ -30,18 +30,20 @@ class BoardViewModel:
         for subscriber in self.subcribers:
             subscriber()
 
-    def new_board_cmd(self, size: str):
+    def new_board_cmd(self, size: str, index=None):
         """size in one of BOARD_SIZE."""
         assert size in BoardViewModel.BOARD_SIZES
 
-        rows, columns = [int(x) for x in size.split("x")]
+        columns, rows = [int(x) for x in size.split("x")]
         candiates = []
 
         for board in self.puzzles:
             if board.rows == rows and board.columns == columns:
                 candiates.append(board)
 
-        self.board = random.choice(candiates)
+        if index is None:
+            index = random.randint(0, len(candiates) - 1)
+        self.board = candiates[index]
         self.stats.reset()
 
         self.board_changed()

@@ -26,7 +26,8 @@ def load_puzzles(filepath: Path | str) -> List[Board]:
         for line in lines:
             rows, columns, *cells_flat = [int(x) for x in line.split(" ")]
             cell_vals = [
-                cells_flat[slice(rows * i, rows * i + columns)] for i in range(rows)
+                cells_flat[slice(columns * i, columns * i + columns)]
+                for i in range(rows)
             ]
 
             cells = []

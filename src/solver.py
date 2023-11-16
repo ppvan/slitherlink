@@ -45,7 +45,7 @@ class Solver:
 
         # TODO itersolve is empty with 25x30
         for test_solution in pycosat.itersolve(clauses):
-            print(f"{count}")
+            # print(f"{count}")
             if test_solution in ["UNSAT", "UNKNOWN"]:
                 print("UNSATSISFIED")
                 return self.board

@@ -10,17 +10,18 @@ BOARD_SIZES = ["5x5", "7x7", "10x10", "15x15", "20x20", "25x30"]
 
 def do_word(size: str):
     repository = BoardRepository()
+    repository.config(f"data/puzzle_{size} normal.txt")
     viewmodel = BoardViewModel(repository)
-    viewmodel.new_board_cmd(size)
 
-    solver = Solver(viewmodel.board)
+    for i in range(10):
+        viewmodel.new_board_cmd(size, i)
+        solver = Solver(viewmodel.board)
 
-    board = solver.solve()
-
-    if board.solved:
-        print(board.stats)
-    else:
-        print("UNSATSISFIED")
+        board = solver.solve()
+        if board.solved:
+            print(board.stats)
+        else:
+            print("UNSATSISFIED")
 
 
 if __name__ == "__main__":
