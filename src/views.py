@@ -5,6 +5,7 @@ from tkinter import font as tkfont
 import sv_ttk
 from PIL import Image, ImageTk
 from viewmodels import BoardViewModel
+import time
 
 
 class Window(tk.Tk):
@@ -32,7 +33,9 @@ class Window(tk.Tk):
         # subcribe when board changes
         self.viewmodel.add_board_changed_callback(self.draw_board)
         self.viewmodel.add_board_changed_callback(self.controls.update_stats)
+
         self.viewmodel.add_graph_changed_callback(self.draw_graph)
+        self.viewmodel.add_graph_changed_callback(self.controls.update_stats)
 
     def draw_graph(self):
         self.board.redraw_edges()
@@ -86,11 +89,44 @@ class BoardFrame(ttk.Frame):
         self.font_size = font_size = min(int(spacer // 2), 48)
         self.base_font.config(size=font_size)
         self.font = self.base_font
-
         self.canvas.delete("edges")
-        for src, neighbors in self.viewmodel.board.graph.items():
-            for dest in neighbors:
-                self.draw_edge(src, dest)
+
+        # time.sleep(0.4)
+
+        def get_start():
+            return next(
+                (
+                    node
+                    for node, neighbors in self.viewmodel.board.graph.items()
+                    if neighbors and node not in visited
+                ),
+                None,
+            )
+
+        def dfs(node, visited):
+            visited.append(node)
+            for neighbor in self.viewmodel.board.graph[node]:
+                if neighbor not in visited:
+                    self.draw_edge(node, neighbor, fill=fill)
+                    self.draw_edge(neighbor, node, fill=fill)
+                    time.sleep(0.01)
+
+                    dfs(neighbor, visited)
+
+        visited = list()
+        start = get_start()
+        one_loop = True
+        fill = "#89B6A5"
+
+        while start:
+            if not one_loop:
+                fill = "#e74c3c"
+
+            dfs(start, visited)
+            self.draw_edge(visited[-1], start, fill=fill)
+            visited.append(start)
+            start = get_start()
+            one_loop = False
 
     def redraw(self, tags=TAGS):
         rows = self.viewmodel.board.rows
@@ -167,7 +203,7 @@ class BoardFrame(ttk.Frame):
             tags="nodes",
         )
 
-    def draw_edge(self, src, dest):
+    def draw_edge(self, src, dest, fill="#89B6A5"):
         y1 = src.row * (self.spacer + self.point_size) + self.border_size
         x1 = src.column * (self.spacer + self.point_size) + self.border_size
 
@@ -182,7 +218,7 @@ class BoardFrame(ttk.Frame):
             + self.point_size
         )
         self.canvas.create_rectangle(
-            x1, y1, x2, y2, fill="#89B6A5", outline="#0A2E36", tags="edges"
+            x1, y1, x2, y2, fill=fill, outline="#0A2E36", tags="edges"
         )
 
 

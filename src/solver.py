@@ -104,12 +104,9 @@ class Solver:
 
         self._extract_solution(ans)
 
-        start = None
-        for node, neighbors in self.board.graph.items():
-            if len(neighbors) > 0:
-                start = node
-                break
-
+        start = next(
+            (node for node, neighbors in self.board.graph.items() if neighbors), None
+        )
         visited = set()
         self._dfs(start, visited)
 

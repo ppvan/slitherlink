@@ -73,7 +73,7 @@ class BoardViewModel:
             self.board = board
             self.stats = solver.stats
             self.graph_changed()
-            time.sleep(1)
+            # time.sleep(0.5)
 
         solver = Solver(board=self.board, cancel_event=cancel)
         if animation:
