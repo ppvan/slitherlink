@@ -30,14 +30,20 @@ class Window(tk.Tk):
         self.controls.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=2, pady=2)
 
         # subcribe when board changes
-        self.viewmodel.subcribe(self.board.redraw)
-        self.viewmodel.subcribe(self.controls.update_stats)
+        self.viewmodel.add_board_changed_callback(self.draw_board)
+        self.viewmodel.add_board_changed_callback(self.controls.update_stats)
+        self.viewmodel.add_graph_changed_callback(self.draw_graph)
+
+    def draw_graph(self):
+        self.board.redraw_edges()
 
     def draw_board(self):
         self.board.redraw()
 
 
 class BoardFrame(ttk.Frame):
+    TAGS = ["cells", "edges", "cells"]
+
     def __init__(self, master, viewmodel: BoardViewModel):
         super().__init__(master, width=600, height=600)
         self.base_font = tkfont.Font(family="Arial", size=12)
@@ -66,22 +72,58 @@ class BoardFrame(ttk.Frame):
         self.canvas.create_rectangle(0, 0, img.width, img.height, fill="red")
         self.canvas.create_image(0, 0, image=self.photo, anchor="nw")
 
-    def redraw(self, debug=True):
+    def redraw_edges(self):
         rows = self.viewmodel.board.rows
         columns = self.viewmodel.board.columns
 
-        size = max(rows, columns) + 1
-        border_size = 4
-        canvas_size = self.canvas.winfo_width()
-        point_size = (canvas_size - 2 * border_size) / (8 * size - 7)
-        spacer = 7 * point_size
-        colors = ["#44222F", "#21300D", "#B4DC7F", "#3C3D00"]
+        self.size = size = max(rows, columns) + 1
+        self.border_size = border_size = 4
+        self.canvas_size = canvas_size = self.canvas.winfo_width()
+        self.point_size = point_size = (canvas_size - 2 * border_size) / (8 * size - 7)
+        self.spacer = spacer = 7 * point_size
+        self.colors = ["#44222F", "#21300D", "#B4DC7F", "#3C3D00"]
 
-        font_size = min(int(spacer // 2), 48)
+        self.font_size = font_size = min(int(spacer // 2), 48)
         self.base_font.config(size=font_size)
-        font = self.base_font
+        self.font = self.base_font
+
+        self.canvas.delete("edges")
+        for src, neighbors in self.viewmodel.board.graph.items():
+            for dest in neighbors:
+                self.draw_edge(src, dest)
+
+    def redraw(self, tags=TAGS):
+        rows = self.viewmodel.board.rows
+        columns = self.viewmodel.board.columns
+
+        self.size = size = max(rows, columns) + 1
+        self.border_size = border_size = 4
+        self.canvas_size = canvas_size = self.canvas.winfo_width()
+        self.point_size = point_size = (canvas_size - 2 * border_size) / (8 * size - 7)
+        self.spacer = spacer = 7 * point_size
+        self.colors = ["#44222F", "#21300D", "#B4DC7F", "#3C3D00"]
+
+        self.font_size = font_size = min(int(spacer // 2), 48)
+        self.base_font.config(size=font_size)
+        self.font = self.base_font
+        self.draw_background()
 
         self.canvas.delete("all")
+
+        # Draw point grid
+        for x in range(columns + 1):
+            for y in range(rows + 1):
+                self.draw_node(x, y)
+
+        cells = self.viewmodel.board.cells
+        for x in range(columns):
+            for y in range(rows):
+                self.draw_cell(x, y, cells)
+        for src, neighbors in self.viewmodel.board.graph.items():
+            for dest in neighbors:
+                self.draw_edge(src, dest)
+
+    def draw_background(self):
         self.canvas.create_rectangle(
             1,
             1,
@@ -92,58 +134,56 @@ class BoardFrame(ttk.Frame):
             width=2,
         )
 
-        # Draw point grid
-        for x in range(columns + 1):
-            for y in range(rows + 1):
-                x1 = x * (spacer + point_size) + border_size
-                y1 = y * (spacer + point_size) + border_size
+    def draw_cell(self, x, y, cells):
+        x1 = x * (self.spacer + self.point_size) + self.border_size + self.point_size
+        y1 = y * (self.spacer + self.point_size) + self.border_size + self.point_size
+        centerx = x1 + self.spacer // 2
+        centery = y1 + self.spacer // 2
 
-                self.canvas.create_rectangle(
-                    x1,
-                    y1,
-                    x1 + point_size,
-                    y1 + point_size,
-                    fill="#D56F3E",
-                )
+        cell_val = cells[y][x].value
 
-        # Draw cell
-        cells = self.viewmodel.board.cells
-        for x in range(columns):
-            for y in range(rows):
-                x1 = x * (spacer + point_size) + border_size + point_size
-                y1 = y * (spacer + point_size) + border_size + point_size
+        if cell_val == -1:
+            self.canvas.create_text(centerx, centery, text=" ", font=self.font)
+        else:
+            self.canvas.create_text(
+                centerx,
+                centery,
+                text=str(cell_val),
+                font=self.font,
+                fill=self.colors[cell_val],
+                tags="cells",
+            )
 
-                centerx = x1 + spacer // 2
-                centery = y1 + spacer // 2
+    def draw_node(self, x, y):
+        x1 = x * (self.spacer + self.point_size) + self.border_size
+        y1 = y * (self.spacer + self.point_size) + self.border_size
 
-                cell_val = cells[y][x].value
+        self.canvas.create_rectangle(
+            x1,
+            y1,
+            x1 + self.point_size,
+            y1 + self.point_size,
+            fill="#D56F3E",
+            tags="nodes",
+        )
 
-                if cell_val == -1:
-                    self.canvas.create_text(centerx, centery, text=" ", font=font)
-                else:
-                    self.canvas.create_text(
-                        centerx,
-                        centery,
-                        text=str(cell_val),
-                        font=font,
-                        fill=colors[cell_val],
-                    )
-        # Draw edges
-        for src, neighbors in self.viewmodel.board.graph.items():
-            for dest in neighbors:
-                y1 = src.row * (spacer + point_size) + border_size
-                x1 = src.column * (spacer + point_size) + border_size
+    def draw_edge(self, src, dest):
+        y1 = src.row * (self.spacer + self.point_size) + self.border_size
+        x1 = src.column * (self.spacer + self.point_size) + self.border_size
 
-                y2 = dest.row * (spacer + point_size) + border_size + point_size
-                x2 = dest.column * (spacer + point_size) + border_size + point_size
-                self.canvas.create_rectangle(
-                    x1,
-                    y1,
-                    x2,
-                    y2,
-                    fill="#89B6A5",
-                    outline="#0A2E36",
-                )
+        y2 = (
+            dest.row * (self.spacer + self.point_size)
+            + self.border_size
+            + self.point_size
+        )
+        x2 = (
+            dest.column * (self.spacer + self.point_size)
+            + self.border_size
+            + self.point_size
+        )
+        self.canvas.create_rectangle(
+            x1, y1, x2, y2, fill="#89B6A5", outline="#0A2E36", tags="edges"
+        )
 
 
 class ControlFrame(ttk.Frame):

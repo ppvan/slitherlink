@@ -24,15 +24,23 @@ class BoardViewModel:
         self.repo = repo
         self.board = board
 
-        self.subcribers = []
+        self.board_subcribers = []
+        self.graph_subcribers = []
         self.puzzles = repo.find_all(size="5x5", diff="normal")
         self.stats = Statistics()
 
-    def subcribe(self, callback):
-        self.subcribers.append(callback)
+    def add_board_changed_callback(self, callback):
+        self.board_subcribers.append(callback)
+
+    def add_graph_changed_callback(self, callback):
+        self.graph_subcribers.append(callback)
 
     def board_changed(self):
-        for subscriber in self.subcribers:
+        for subscriber in self.board_subcribers:
+            subscriber()
+
+    def graph_changed(self):
+        for subscriber in self.graph_subcribers:
             subscriber()
 
     def new_board_cmd(
@@ -64,7 +72,7 @@ class BoardViewModel:
         def update_ui(board: Board, stats: Statistics):
             self.board = board
             self.stats = solver.stats
-            self.board_changed()
+            self.graph_changed()
             time.sleep(1)
 
         solver = Solver(board=self.board, cancel_event=cancel)

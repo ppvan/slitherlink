@@ -38,12 +38,14 @@ class Solver:
         self.board = board
         self.cancel_event = cancel_event
         self.stats = Statistics()
+
+        self.subcribers = []
         pass
 
     def add_partial_solution_callback(
         self, callback: Callable[[Board, Statistics], None]
     ):
-        self.on_partial_solution = callback
+        self.subcribers.append(callback)
 
     def solve(self) -> Board:
         self.assign_edges_index()
@@ -73,9 +75,10 @@ class Solver:
             self.stats.time = total_time
             self.stats.retried = retried
 
-            if self.on_partial_solution:
+            if self.subcribers:
                 self._extract_solution(test_solution)
-                self.on_partial_solution(self.board, self.stats)
+                for callback in self.subcribers:
+                    callback(self.board, self.stats)
 
             # only account for SAT solving time
             start = time.perf_counter()
@@ -134,10 +137,6 @@ class Solver:
                 nodes[i][j].right = i * n + j + 1 if j < n else 0
                 nodes[i][j].top = (m + 1) * n + j * m + i if i > 0 else 0
                 nodes[i][j].bottom = (m + 1) * n + j * m + i + 1 if i < m else 0
-                # nodes[i][j].left = i * n + j
-                # nodes[i][j].right = i * n + j + 1
-                # nodes[i][j].top = (m + 1) * n + j * m + i
-                # nodes[i][j].bottom = (m + 1) * n + j * m + i + 1
 
     def encode_rules(self):
         self.contraints = (
