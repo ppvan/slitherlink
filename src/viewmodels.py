@@ -1,7 +1,7 @@
-from models import Board, Worker
+from models import Board
 from solver import Solver, Statistics
 from typing import List, Callable
-from utils import load_puzzles
+from repository import BoardRepository
 import random
 import concurrent.futures
 
@@ -15,10 +15,12 @@ class BoardViewModel:
 
     BOARD_SIZES = ["5x5", "7x7", "10x10", "15x15", "20x20", "25x30"]
 
-    def __init__(self, board: Board = None):  # type: ignore
+    def __init__(self, repo: BoardRepository, board: Board = None):  # type: ignore
+        self.repo = repo
         self.board = board
+
         self.subcribers = []
-        self.puzzles = load_puzzles("puzzles.txt")
+        self.puzzles = repo.find_all()
         self.stats = Statistics()
 
     def subcribe(self, callback):
