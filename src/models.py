@@ -1,9 +1,7 @@
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import List, DefaultDict, Callable
+from typing import List, DefaultDict
 from collections import defaultdict
-from threading import Thread
-from functools import cache
 
 
 @dataclass
@@ -119,13 +117,3 @@ class Board:
         new_board = Board(rows=self.rows, columns=self.columns, cells=cells)
 
         return new_board
-
-
-class Worker(Thread):
-    def __init__(self, task: Callable):
-        super().__init__()
-        self.setDaemon(True)
-        self.task = task
-
-    def run(self):
-        self.task()
