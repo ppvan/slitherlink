@@ -162,14 +162,22 @@ class ControlFrame(ttk.Frame):
         self.build_ui()
 
     def new_board(self):
+        self.solve_btn["state"] = tk.DISABLED
         size = self.board_size.get()
         diff = self.difficulty.get()
         index = self.index.get()
         self.viewmodel.new_board_cmd(size, diff, index)
+        self.solve_btn["state"] = tk.NORMAL
 
     def solve_board(self):
-        self.viewmodel.solve_board_cmd()
-        pass
+        self.solve_btn["state"] = tk.DISABLED
+        self.new_btn["state"] = tk.DISABLED
+
+        def done():
+            self.new_btn["state"] = tk.NORMAL
+            self.solve_btn["state"] = tk.NORMAL
+
+        self.viewmodel.solve_board_cmd(done_callback=done)
 
     def update_stats(self):
         self.time.set(f"{(self.viewmodel.stats.time * 1000):.2f} ms")
@@ -259,5 +267,8 @@ class ControlFrame(ttk.Frame):
 
         solve_btn = ttk.Button(button_fr, text="Solve", command=self.solve_board)
         solve_btn.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=2, pady=2)
+
+        self.new_btn = new_btn
+        self.solve_btn = solve_btn
 
         button_fr.pack(side=tk.TOP, fill=tk.X, pady=10)

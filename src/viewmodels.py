@@ -3,7 +3,9 @@ from solver import Solver, Statistics
 from typing import List, Callable
 from repository import BoardRepository
 import random
-import concurrent.futures
+from collections import defaultdict
+from threading import Thread
+import time
 
 
 class BoardViewModel:
@@ -32,7 +34,9 @@ class BoardViewModel:
         for subscriber in self.subcribers:
             subscriber()
 
-    def new_board_cmd(self, size: str, difficulty: str, index="Random"):
+    def new_board_cmd(
+        self, size: str, difficulty: str, index="Random", done_callback: Callable = None
+    ):
         """size in one of BOARD_SIZE."""
         assert size in BoardViewModel.BOARD_SIZES
         assert difficulty in BoardViewModel.DIFFICULTY
@@ -47,36 +51,32 @@ class BoardViewModel:
             index = int(index) - 1
 
         self.board = candiates[index]
+        self.board.graph = defaultdict(list)
+        self.board.solved = False
         self.stats.reset()
 
         self.board_changed()
-        pass
 
-    def solve_board_cmd(self):
-        slaves = [Solver(self.board.deep_copy()) for _ in range(8)]
-        with concurrent.futures.ProcessPoolExecutor() as executor:
-            solver_futures = {
-                executor.submit(solver.solve): solver for solver in slaves
-            }
+    def do_solve(self, done_callback: Callable = None):
+        def update_ui(board: Board, stats: Statistics):
+            self.board = board
+            self.stats = solver.stats
+            self.board_changed()
+            time.sleep(1)
 
-            concurrent.futures.wait(
-                solver_futures.keys(),
-                timeout=3,
-                return_when=concurrent.futures.FIRST_COMPLETED,
-            )
+        solver = Solver(self.board, on_partial_solution=update_ui)
+        completed_board = solver.solve()
 
-            for future in concurrent.futures.as_completed(solver_futures):
-                completed_board = future.result()
-                self.stats = completed_board.stats
-                self.board = completed_board
-
-                # Cancel the remaining futures
-                for _ in concurrent.futures.as_completed(solver_futures.keys()):
-                    executor.shutdown(wait=False, cancel_futures=True)
-
-                break
+        self.stats = solver.stats
+        self.board = completed_board
 
         self.board_changed()
+        done_callback()
+
+    def solve_board_cmd(self, done_callback: Callable = None):
+        t = Thread(target=self.do_solve, args=(done_callback,))
+        t.daemon = True
+        t.start()
 
     def _profile_solve(self):
         solver = Solver(self.board)

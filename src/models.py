@@ -2,7 +2,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import List, DefaultDict, FrozenSet
 from collections import defaultdict
-from functools import cache
 
 
 @dataclass

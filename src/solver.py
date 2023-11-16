@@ -1,10 +1,11 @@
-from typing import List, MutableSet
+from typing import List, MutableSet, Callable, FrozenSet
 from collections import defaultdict
 import pycosat
 import time
 import sys
 from dataclasses import dataclass
 from models import Board, Node
+from functools import cache
 
 
 @dataclass
@@ -28,43 +29,50 @@ class Statistics:
 
 
 class Solver:
-    def __init__(self, board: Board):
+    def __init__(
+        self,
+        board: Board,
+        on_partial_solution: Callable[[Board, Statistics], None] = None,
+    ):
         self.board = board
+        self.on_partial_solution = on_partial_solution
+        self.stats = Statistics()
         pass
 
     def solve(self) -> Board:
         self.assign_edges_index()
 
-        self.stats = Statistics()
-        self.board.stats = self.stats
-        clauses = self.encode_rules()
-        count = 0
-        ans = []
+        contraints = self.encode_rules()
+        m = self.board.rows
+        n = self.board.columns
+        total_time = 0
+        variables = (m + 1) * n + (n + 1) * m
+        clauses = len(contraints)
+        retried = 0
 
         start = time.perf_counter()
+        for test_solution in pycosat.itersolve(contraints):
+            clauses += 1  # one more clause for each iteration
+            retried += 1
+            # only account for SAT solving time
+            total_time += time.perf_counter() - start
 
-        # TODO itersolve is empty with 25x30
-        for test_solution in pycosat.itersolve(clauses):
-            # print(f"{count}")
-            if test_solution in ["UNSAT", "UNKNOWN"]:
-                print("UNSATSISFIED")
-                return self.board
+            # Update stats
+            self.stats.clauses = clauses
+            self.stats.variables = variables
+            self.stats.time = total_time
+            self.stats.retried = retried
+
+            if self.on_partial_solution:
+                self._extract_solution(test_solution)
+                self.on_partial_solution(self.board, self.stats)
 
             if self._validate(test_solution):
-                ans = test_solution
-                self._extract_solution(ans)
-                m = self.board.rows
-                n = self.board.columns
-                self.stats.clauses = len(clauses)
-                self.stats.variables = (m + 1) * n + (n + 1) * m
-                self.stats.time = time.perf_counter() - start
-                self.stats.retried = count
+                self._extract_solution(test_solution)
                 self.board.solved = True
+                break
 
-                return self.board
-            count += 1
-
-        print("UNSAT")
+            start = time.perf_counter()
 
         return self.board
 
@@ -127,14 +135,13 @@ class Solver:
         )
         return self.contraints
 
-    def _extract_solution(self, model: List[int]):
+    @cache
+    def do_extract_solution(self, model: FrozenSet[int]):
         nodes = self.board.nodes
         m = self.board.rows
         n = self.board.columns
-        clean_model = frozenset(x for x in model if x > 0)
 
-        self.board.graph = defaultdict(list)
-
+        graph = defaultdict(list)
         for i in range(m):
             for j in range(n):
                 top = i * n + j + 1
@@ -142,22 +149,27 @@ class Solver:
                 left = (m + 1) * n + j * m + i + 1
                 right = (m + 1) * n + (j + 1) * m + i + 1
 
-                if top in clean_model:
-                    self.board.graph[nodes[i][j]].append(nodes[i][j + 1])
-                    self.board.graph[nodes[i][j + 1]].append(nodes[i][j])
+                if top in model:
+                    graph[nodes[i][j]].append(nodes[i][j + 1])
+                    graph[nodes[i][j + 1]].append(nodes[i][j])
 
-                if bottom in clean_model:
-                    self.board.graph[nodes[i + 1][j]].append(nodes[i + 1][j + 1])
-                    self.board.graph[nodes[i + 1][j + 1]].append(nodes[i + 1][j])
+                if bottom in model:
+                    graph[nodes[i + 1][j]].append(nodes[i + 1][j + 1])
+                    graph[nodes[i + 1][j + 1]].append(nodes[i + 1][j])
                     pass
-                if left in clean_model:
-                    self.board.graph[nodes[i][j]].append(nodes[i + 1][j])
-                    self.board.graph[nodes[i + 1][j]].append(nodes[i][j])
+                if left in model:
+                    graph[nodes[i][j]].append(nodes[i + 1][j])
+                    graph[nodes[i + 1][j]].append(nodes[i][j])
                     pass
-                if right in clean_model:
-                    self.board.graph[nodes[i][j + 1]].append(nodes[i + 1][j + 1])
-                    self.board.graph[nodes[i + 1][j + 1]].append(nodes[i][j + 1])
+                if right in model:
+                    graph[nodes[i][j + 1]].append(nodes[i + 1][j + 1])
+                    graph[nodes[i + 1][j + 1]].append(nodes[i][j + 1])
                     pass
+        return graph
+
+    def _extract_solution(self, model: List[int]):
+        clean_model = frozenset(x for x in model if x > 0)
+        self.board.graph = self.do_extract_solution(clean_model)
 
     def _cell_contraints(self):
         atmosts = [zero, one, two, three]
@@ -192,7 +204,7 @@ class Solver:
         for i in range(1, self.board.rows - 1):
             for j in range(1, self.board.columns - 1):
                 cell = self.board.cells[i][j]
-                _e1, e2, e3, _e4 = [cell.top, cell.right, cell.bottom, cell.left]
+                _, e2, e3, _ = [cell.top, cell.right, cell.bottom, cell.left]
                 if cell.value == -1:
                     continue
                 else:
