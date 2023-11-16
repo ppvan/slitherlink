@@ -154,6 +154,10 @@ class ControlFrame(ttk.Frame):
         self.board_size = tk.StringVar()
         self.difficulty = tk.StringVar()
         self.index = tk.StringVar()
+        self.animation = tk.BooleanVar(value=False)
+
+        self.animation.set(False)
+
         self.time = tk.StringVar(value="0.000 ms")
         self.clauses = tk.StringVar(value="0")
         self.variables = tk.StringVar(value="0")
@@ -172,12 +176,28 @@ class ControlFrame(ttk.Frame):
     def solve_board(self):
         self.solve_btn["state"] = tk.DISABLED
         self.new_btn["state"] = tk.DISABLED
+        self.cancel_btn["state"] = tk.NORMAL
+
+        animation = self.animation.get()
 
         def done():
             self.new_btn["state"] = tk.NORMAL
             self.solve_btn["state"] = tk.NORMAL
+            self.cancel_btn["state"] = tk.DISABLED
 
-        self.viewmodel.solve_board_cmd(done_callback=done)
+        self.viewmodel.solve_board_cmd(done_callback=done, animation=animation)
+
+    def cancel(self):
+        self.solve_btn["state"] = tk.DISABLED
+        self.new_btn["state"] = tk.DISABLED
+        self.cancel_btn["state"] = tk.DISABLED
+
+        def done():
+            self.new_btn["state"] = tk.NORMAL
+            self.solve_btn["state"] = tk.NORMAL
+            self.cancel_btn["state"] = tk.DISABLED
+
+        self.viewmodel.cancel_cmd(done_callback=done)
 
     def update_stats(self):
         self.time.set(f"{(self.viewmodel.stats.time * 1000):.2f} ms")
@@ -225,6 +245,18 @@ class ControlFrame(ttk.Frame):
         label11.pack(side=tk.LEFT, padx=4, pady=2)
         combox11.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
 
+        row12 = ttk.Frame(option_fr)
+        label12 = ttk.Label(row12, text="Animation", width=12)
+        combox12 = ttk.Combobox(
+            row12,
+            values=BoardViewModel.ANIMATION,
+            state="readonly",
+            textvariable=self.animation,
+        )
+        combox12.current(0)
+        label12.pack(side=tk.LEFT, padx=4, pady=2)
+        combox12.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
+
         row2 = ttk.Frame(option_fr)
         label2 = ttk.Label(row2, text="Time", width=12)
         timelabel = ttk.Label(row2, text="0", textvariable=self.time)
@@ -252,6 +284,7 @@ class ControlFrame(ttk.Frame):
         row1.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row10.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row11.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
+        row12.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row2.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row3.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row4.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
@@ -260,6 +293,15 @@ class ControlFrame(ttk.Frame):
 
         spacer = ttk.Frame(self)
         spacer.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        cancel_ft = ttk.Frame(self)
+        cancel_btn = ttk.Button(
+            cancel_ft,
+            text="Cancel",
+            command=self.cancel,
+            state=tk.DISABLED,
+        )
+        cancel_btn.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=2, pady=2)
 
         button_fr = ttk.Frame(self)
         new_btn = ttk.Button(button_fr, text="New", command=self.new_board)
@@ -270,5 +312,7 @@ class ControlFrame(ttk.Frame):
 
         self.new_btn = new_btn
         self.solve_btn = solve_btn
+        self.cancel_btn = cancel_btn
 
-        button_fr.pack(side=tk.TOP, fill=tk.X, pady=10)
+        button_fr.pack(side=tk.TOP, fill=tk.X, pady=(0, 2))
+        cancel_ft.pack(side=tk.TOP, fill=tk.X, pady=(0, 10))

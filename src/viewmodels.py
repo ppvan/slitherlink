@@ -4,7 +4,7 @@ from typing import List, Callable
 from repository import BoardRepository
 import random
 from collections import defaultdict
-from threading import Thread
+from threading import Thread, Event
 import time
 
 
@@ -18,6 +18,7 @@ class BoardViewModel:
     BOARD_SIZES = ["5x5", "7x7", "10x10", "15x15", "20x20", "25x30"]
     DIFFICULTY = ["normal", "hard"]
     NO_PUZZLES = ["Random"] + [str(i + 1) for i in range(10)]
+    ANIMATION = [True, False]
 
     def __init__(self, repo: BoardRepository, board: Board = None):  # type: ignore
         self.repo = repo
@@ -57,26 +58,41 @@ class BoardViewModel:
 
         self.board_changed()
 
-    def do_solve(self, done_callback: Callable = None):
+    def do_solve(
+        self, done_callback: Callable = None, animation=False, cancel: Event = None
+    ):
         def update_ui(board: Board, stats: Statistics):
             self.board = board
             self.stats = solver.stats
             self.board_changed()
             time.sleep(1)
 
-        solver = Solver(self.board, on_partial_solution=update_ui)
+        solver = Solver(board=self.board, cancel_event=cancel)
+        if animation:
+            solver.add_partial_solution_callback(update_ui)
+
         completed_board = solver.solve()
 
-        self.stats = solver.stats
-        self.board = completed_board
-
-        self.board_changed()
         done_callback()
+        if not animation:
+            self.stats = solver.stats
+            self.board = completed_board
+            self.board_changed()
 
-    def solve_board_cmd(self, done_callback: Callable = None):
-        t = Thread(target=self.do_solve, args=(done_callback,))
+    def solve_board_cmd(self, done_callback: Callable = None, animation=False):
+        self.stop_solving = Event()
+        t = Thread(
+            target=self.do_solve,
+            args=(done_callback, animation, self.stop_solving),
+        )
         t.daemon = True
         t.start()
+
+    def cancel_cmd(self, done_callback: Callable = None):
+        if self.stop_solving:
+            self.stop_solving.set()
+
+        done_callback()
 
     def _profile_solve(self):
         solver = Solver(self.board)

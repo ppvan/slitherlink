@@ -6,6 +6,7 @@ import sys
 from dataclasses import dataclass
 from models import Board, Node
 from functools import cache
+import threading
 
 
 @dataclass
@@ -32,12 +33,17 @@ class Solver:
     def __init__(
         self,
         board: Board,
-        on_partial_solution: Callable[[Board, Statistics], None] = None,
+        cancel_event: threading.Event = None,
     ):
         self.board = board
-        self.on_partial_solution = on_partial_solution
+        self.cancel_event = cancel_event
         self.stats = Statistics()
         pass
+
+    def add_partial_solution_callback(
+        self, callback: Callable[[Board, Statistics], None]
+    ):
+        self.on_partial_solution = callback
 
     def solve(self) -> Board:
         self.assign_edges_index()
@@ -57,6 +63,10 @@ class Solver:
             # only account for SAT solving time
             total_time += time.perf_counter() - start
 
+            # Check for cancellation
+            if self.cancel_event and self.cancel_event.is_set():
+                break
+
             # Update stats
             self.stats.clauses = clauses
             self.stats.variables = variables
@@ -67,12 +77,12 @@ class Solver:
                 self._extract_solution(test_solution)
                 self.on_partial_solution(self.board, self.stats)
 
+            # only account for SAT solving time
+            start = time.perf_counter()
             if self._validate(test_solution):
                 self._extract_solution(test_solution)
                 self.board.solved = True
                 break
-
-            start = time.perf_counter()
 
         return self.board
 
