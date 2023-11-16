@@ -1,20 +1,27 @@
 #!/usr/bin/python
 
 # Adapted from https://github.com/pinkston3/slitherlink/blob/master/get_puzzle.py
-
-import requests
 from bs4 import BeautifulSoup
+import asyncio
+import aiofiles
+import aiohttp
 
 URL = "http://www.puzzle-loop.com"
 
 
-def get_puzzle(size: int) -> str:
+async def make_request(session: aiohttp.ClientSession, diff: str):
+    async with session.get(URL, params={"size": diff, "v": 0}) as resp:
+        content = await resp.text()
+        puzzle = parse_puzzle(content)
+
+        return puzzle
+
+
+def parse_puzzle(text: str) -> str:
     """
     Get the puzzle from the given page.
     """
-    page = requests.get(URL, params={"size": size, "v": 0})
-    soup = BeautifulSoup(page.text, "html.parser")
-
+    soup = BeautifulSoup(text, "lxml")
     puzzle_table = soup.find("table", id="LoopTable")
 
     puzzle_rows = puzzle_table.findAll("tr")
@@ -62,9 +69,32 @@ def get_puzzle(size: int) -> str:
 #        13 = special daily loop
 #        12 = special weekly loop
 #        14 = special monthly loop
+difficulty_map = {
+    4: "5x5 hard",
+    10: "7x7 normal",
+    11: "7x7 hard",
+    1: "10x10 normal",
+    5: "10x10 hard",
+    2: "15x15 normal",
+    6: "15x15 hard",
+    3: "20x20 normal",
+    7: "20x20 hard",
+    8: "25x30 normal",
+    9: "25x30 hard",
+}
 
-difficulties = [4, 10, 11, 1, 5, 2, 6, 3, 7, 8, 9]
 
-for dif in difficulties:
-    p = get_puzzle(dif)
-    print(p)
+async def main():
+    async with aiohttp.ClientSession() as session:
+        # difficulties = [4, 10, 11, 1, 5, 2, 6, 3, 7, 8, 9]
+        for dif, name in difficulty_map.items():
+            async with aiofiles.open(f"data/puzzle_{name}.txt", "w") as f:
+                for _ in range(10):
+                    p = await make_request(session, dif)
+                    print(p)
+                    await f.write(p + "\n")
+
+
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
