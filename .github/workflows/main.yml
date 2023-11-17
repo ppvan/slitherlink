@@ -23,6 +23,6 @@ jobs:
       run: |
         git checkout -b report
         # Assuming the evaluation script generates a report.csv file
-        git add reports.csv
+        git add reports.csv -f
         git commit -m "Add evaluation report ({sha})"
         git push origin report
