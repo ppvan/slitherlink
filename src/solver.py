@@ -16,11 +16,11 @@ class Statistics:
     variables: int = 0
     retried: int = 0
 
-    def __init__(self):
-        self.time = 0
-        self.clauses = 0
-        self.variables = 0
-        self.retried = 0
+    # def __init__(self):
+    #     self.time = 0
+    #     self.clauses = 0
+    #     self.variables = 0
+    #     self.retried = 0
 
     def reset(self):
         self.time = 0
