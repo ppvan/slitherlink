@@ -40,6 +40,7 @@ class MySolver:
         self.cancel_event = cancel_event
         self.stats = Statistics()
 
+        self.assumpsions = []
         self.subcribers = []
         pass
 
@@ -61,7 +62,10 @@ class MySolver:
             warm_start=True,
             incr=True,
         ) as solver:
-            for retried, test_solution in enumerate(solver.enum_models(), start=1):
+            for retried, test_solution in enumerate(
+                solver.enum_models(assumptions=self.assumpsions),
+                start=1,
+            ):
                 # Update stats
                 self.stats.clauses = solver.nof_clauses()
                 self.stats.variables = solver.nof_vars()
@@ -134,8 +138,19 @@ class MySolver:
 
     def encode_rules(self):
         self.contraints = (
-            self._cell_contraints() + self._node_contraints() + self._corners_rules()
+            self._cell_contraints()
+            + self._node_contraints()
+            + self._corners_rules()
+            # + self._heuristic_rules()
         )
+
+        tmp = self._heuristic_rules()
+        for cnf in tmp:
+            if len(cnf) == 1:
+                self.assumpsions.append(cnf[0])
+
+        self.assumpsions = list(frozenset(self.assumpsions))
+
         return self.contraints
 
     @cache
@@ -207,16 +222,60 @@ class MySolver:
         for i in range(1, self.board.rows - 1):
             for j in range(1, self.board.columns - 1):
                 cell = self.board.cells[i][j]
-                _, e2, e3, _ = [cell.top, cell.right, cell.bottom, cell.left]
                 if cell.value == -1:
                     continue
-                else:
-                    if cell.value == 1:
-                        tl_cell = self.board.cells[i - 1][j - 1]
-                        e5, e6 = tl_cell.right, tl_cell.bottom
-                        cnf = [[e5, -e6, -e2], [e5, -e6, -e3]]
-                    contraints.extend(cnf)
-        pass
+                cnf = (
+                    self._line_to_1(cell, i, j)
+                    + self.dia_adjacent(cell, i, j)
+                    + self._cell_nextto(cell, i, j)
+                )
+                contraints.extend(cnf)
+
+        return contraints
+
+    def dia_adjacent(self, cell, i, j):
+        cnf = []
+        rb_cell = self.board.cells[i + 1][j + 1]
+        lb_cell = self.board.cells[i + 1][j - 1]
+        if cell.value == 1 and rb_cell.value == 1:
+            e1, e2, e3, e4 = cell.right, cell.bottom, rb_cell.top, rb_cell.left
+            cnf += [[-e1, -e2, e3], [-e1, -e2, e4]]
+
+            e1, e2, e3, e4 = cell.top, cell.left, rb_cell.right, rb_cell.bottom
+            cnf += [[-e1, -e2, e3], [-e1, -e2, e4]]
+        elif cell.value == 3 and rb_cell.value == 3:
+            e1, e2, e3, e4 = cell.top, cell.left, rb_cell.right, rb_cell.bottom
+            cnf += [[e1], [e2], [e3], [e4]]
+
+        elif cell.value == 3 and lb_cell.value == 3:
+            e1, e2, e3, e4 = cell.top, cell.right, lb_cell.left, lb_cell.bottom
+            cnf += [[e1], [e2], [e3], [e4]]
+
+        return cnf
+
+    def _cell_nextto(self, cell, i, j):
+        hoz_next = self.board.cells[i][j + 1]
+        vert_next = self.board.cells[i + 1][j]
+        cnf = []
+        if cell.value == 3 and vert_next.value == 3:
+            cnf += [[cell.top], [cell.bottom], [vert_next.top]]
+        elif cell.value == 3 and hoz_next.value == 3:
+            cnf += [[cell.left], [cell.right], [hoz_next.left]]
+
+        return cnf
+
+    def _line_to_1(self, cell, i, j):
+        cnf = []
+        _, e2, e3, _ = [cell.top, cell.right, cell.bottom, cell.left]
+        if cell.value == 1:
+            tl_cell = self.board.cells[i - 1][j - 1]
+            e5, e6 = tl_cell.right, tl_cell.bottom
+            # cnf = [[e5, -e6, -e2], [e5, -e6, -e3], [-e6, e2, e3, -e5]]
+            cnf = [[e5, -e6, -e2], [e5, -e6, -e3]]
+
+            return cnf
+
+        return cnf
 
     def _corners_rules(self):
         """https://en.wikipedia.org/wiki/Slitherlink?useskin=vector#Corners"""
@@ -227,6 +286,25 @@ class MySolver:
             self.board.cells[self.board.rows - 1][0],
             self.board.cells[self.board.rows - 1][self.board.columns - 1],
         ]
+        corner_awaylines = [
+            [
+                self.board.cells[0][1].top,
+                self.board.cells[1][0].left,
+            ],
+            [
+                self.board.cells[0][self.board.columns - 2].top,
+                self.board.cells[1][self.board.columns - 1].right,
+            ],
+            [
+                self.board.cells[self.board.rows - 1][1].bottom,
+                self.board.cells[self.board.rows - 2][0].left,
+            ],
+            [
+                self.board.cells[self.board.rows - 1][self.board.columns - 2].bottom,
+                self.board.cells[self.board.rows - 2][self.board.columns - 1].right,
+            ],
+        ]
+
         cornerlines = [
             [
                 self.board.cells[0][0].top,
@@ -251,6 +329,8 @@ class MySolver:
                 contraints.extend([[-line] for line in cornerlines[index]])
             elif corner.value == 3:
                 contraints.extend([[line] for line in cornerlines[index]])
+            elif corner.value == 2:
+                contraints.extend([[line] for line in corner_awaylines[index]])
             else:
                 pass
 
