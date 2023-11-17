@@ -41,6 +41,7 @@ class MySolver:
         self.stats = Statistics()
 
         self.assumpsions = []
+        self.hint_clauses = []
         self.subcribers = []
         pass
 
@@ -138,7 +139,10 @@ class MySolver:
 
     def encode_rules(self):
         self.contraints = (
-            self._cell_contraints() + self._node_contraints() + self._corners_rules()
+            self._cell_contraints()
+            + self._node_contraints()
+            + self._corners_rules()
+            + self._break_smalloop()
         )
 
         tmp = self._heuristic_rules()
@@ -224,6 +228,103 @@ class MySolver:
                     continue
                 cnf = self.dia_adjacent(cell, i, j) + self._cell_nextto(cell, i, j)
                 contraints.extend(cnf)
+
+        return contraints
+
+    def _break_smalloop(self):
+        contraints = []
+        m = self.board.rows
+        n = self.board.columns
+
+        top = lambda i, j: i * n + j + 1
+        bottom = lambda i, j: (i + 1) * n + j + 1
+        left = lambda i, j: (m + 1) * n + j * m + i + 1
+        right = lambda i, j: (m + 1) * n + (j + 1) * m + i + 1
+
+        loops = [
+            lambda i, j: (
+                [
+                    top(i, j),
+                    bottom(i, j),
+                    left(i, j),
+                    top(i, j + 1),
+                    bottom(i, j + 1),
+                    right(i, j + 1),
+                ],
+                j < n - 1,
+            ),
+            lambda i, j: (
+                [
+                    top(i, j),
+                    left(i, j),
+                    right(i, j),
+                    bottom(i + 1, j),
+                    left(i + 1, j),
+                    right(i + 1, j),
+                ],
+                i < m - 1,
+            ),
+            lambda i, j: (
+                [
+                    top(i, j),
+                    left(i, j),
+                    top(i, j + 1),
+                    right(i, j + 1),
+                    bottom(i, j + 1),
+                    left(i + 1, j),
+                    right(i + 1, j),
+                    bottom(i + 1, j),
+                ],
+                i < m - 1 and j < n - 1,
+            ),
+            lambda i, j: (
+                [
+                    top(i, j),
+                    left(i, j),
+                    right(i, j),
+                    left(i + 1, j),
+                    bottom(i + 1, j),
+                    top(i + 1, j + 1),
+                    right(i + 1, j + 1),
+                    bottom(i + 1, j + 1),
+                ],
+                i < m - 1 and j < n - 1,
+            ),
+            lambda i, j: (
+                [
+                    right(i, j),
+                    bottom(i, j),
+                    top(i, j + 1),
+                    right(i, j + 1),
+                    right(i + 1, j + 1),
+                    bottom(i + 1, j + 1),
+                    bottom(i + 1, j),
+                    left(i + 1, j),
+                ],
+                i < m - 1 and j < n - 1,
+            ),
+            lambda i, j: (
+                [
+                    left(i, j),
+                    top(i, j),
+                    bottom(i, j),
+                    top(i, j + 1),
+                    right(i, j + 1),
+                    right(i + 1, j + 1),
+                    bottom(i + 1, j + 1),
+                    left(i + 1, j + 1),
+                ],
+                i < m - 1 and j < n - 1,
+            ),
+        ]
+        for i in range(self.board.rows):
+            for j in range(self.board.columns):
+                for loop in loops[:1]:
+                    cnf, useable = loop(i, j)
+                    if not useable:
+                        continue
+
+                    contraints.extend([[-x for x in cnf]])
 
         return contraints
 

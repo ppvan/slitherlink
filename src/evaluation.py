@@ -23,9 +23,9 @@ def evaluate_boards():
             writer.writerow(
                 ["Index", "Size", "Hints", "Diff", "Time", "Vars", "Clause", "Retried"]
             )
-            for size in BOARD_SIZES[:4]:
+            for size in BOARD_SIZES[2:4]:
                 for diff in DIFFICULTY:
-                    for i in PUZZLES[:5]:
+                    for i in PUZZLES:
                         viewmodel.new_board_cmd(size, diff, i)
                         cancel = Event()
                         solver = MySolver(viewmodel.board, cancel)
