@@ -138,10 +138,7 @@ class MySolver:
 
     def encode_rules(self):
         self.contraints = (
-            self._cell_contraints()
-            + self._node_contraints()
-            + self._corners_rules()
-            # + self._heuristic_rules()
+            self._cell_contraints() + self._node_contraints() + self._corners_rules()
         )
 
         tmp = self._heuristic_rules()
@@ -218,17 +215,14 @@ class MySolver:
         return constraints
 
     def _heuristic_rules(self):
+        """Dù có cho bao nhiêu luật đi nữa hiệu quả vẫn không tăng"""
         contraints = []
         for i in range(1, self.board.rows - 1):
             for j in range(1, self.board.columns - 1):
                 cell = self.board.cells[i][j]
                 if cell.value == -1:
                     continue
-                cnf = (
-                    self._line_to_1(cell, i, j)
-                    + self.dia_adjacent(cell, i, j)
-                    + self._cell_nextto(cell, i, j)
-                )
+                cnf = self.dia_adjacent(cell, i, j) + self._cell_nextto(cell, i, j)
                 contraints.extend(cnf)
 
         return contraints
@@ -237,16 +231,10 @@ class MySolver:
         cnf = []
         rb_cell = self.board.cells[i + 1][j + 1]
         lb_cell = self.board.cells[i + 1][j - 1]
-        if cell.value == 1 and rb_cell.value == 1:
-            e1, e2, e3, e4 = cell.right, cell.bottom, rb_cell.top, rb_cell.left
-            cnf += [[-e1, -e2, e3], [-e1, -e2, e4]]
 
-            e1, e2, e3, e4 = cell.top, cell.left, rb_cell.right, rb_cell.bottom
-            cnf += [[-e1, -e2, e3], [-e1, -e2, e4]]
-        elif cell.value == 3 and rb_cell.value == 3:
+        if cell.value == 3 and rb_cell.value == 3:
             e1, e2, e3, e4 = cell.top, cell.left, rb_cell.right, rb_cell.bottom
             cnf += [[e1], [e2], [e3], [e4]]
-
         elif cell.value == 3 and lb_cell.value == 3:
             e1, e2, e3, e4 = cell.top, cell.right, lb_cell.left, lb_cell.bottom
             cnf += [[e1], [e2], [e3], [e4]]
@@ -261,6 +249,48 @@ class MySolver:
             cnf += [[cell.top], [cell.bottom], [vert_next.top]]
         elif cell.value == 3 and hoz_next.value == 3:
             cnf += [[cell.left], [cell.right], [hoz_next.left]]
+        # elif cell.value == 3 and vert_next.value == 0:
+        #     l_cell = self.board.cells[i][j - 1]
+        #     r_cell = hoz_next
+        #     cnf += [
+        #         [cell.top],
+        #         [cell.left],
+        #         [cell.right],
+        #         [l_cell.bottom],
+        #         [r_cell.bottom],
+        #     ]
+        # elif cell.value == 0 and vert_next.value == 3:
+        #     l_cell = self.board.cells[i][j - 1]
+        #     r_cell = hoz_next
+        #     cnf += [
+        #         [vert_next.bottom],
+        #         [vert_next.left],
+        #         [vert_next.right],
+        #         [l_cell.bottom],
+        #         [r_cell.bottom],
+        #     ]
+        # elif cell.value == 3 and hoz_next.value == 0:
+        #     t_cell = self.board.cells[i - 1][j]
+        #     b_cell = vert_next
+        #     cnf += [
+        #         [cell.top],
+        #         [cell.left],
+        #         [cell.bottom],
+        #         [t_cell.right],
+        #         [b_cell.right],
+        #     ]
+        # elif cell.value == 0 and hoz_next.value == 3:
+        #     t_cell = self.board.cells[i - 1][j]
+        #     b_cell = vert_next
+        #     cnf += [
+        #         [hoz_next.top],
+        #         [hoz_next.right],
+        #         [hoz_next.bottom],
+        #         [t_cell.right],
+        #         [b_cell.right],
+        #     ]
+        # elif cell.value == 2 and hoz_next.value == 2:
+        #     cnf += [[cell.left], [cell.right], [hoz_next.left], [hoz_next.right]]
 
         return cnf
 
