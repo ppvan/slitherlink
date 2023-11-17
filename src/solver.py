@@ -5,25 +5,26 @@ from dataclasses import dataclass
 from models import Board, Node
 from functools import cache
 import threading
-
+from utils import measure_time
 from pysat.solvers import Solver
+import time
 
 
 @dataclass
 class Statistics:
-    time: float = 0
+    acum_time: float = 0
     clauses: int = 0
     variables: int = 0
     retried: int = 0
 
     # def __init__(self):
-    #     self.time = 0
+    #     self.acum_time = 0
     #     self.clauses = 0
     #     self.variables = 0
     #     self.retried = 0
 
     def reset(self):
-        self.time = 0
+        self.acum_time = 0
         self.clauses = 0
         self.variables = 0
         self.retried = 0
@@ -47,7 +48,9 @@ class MySolver:
     ):
         self.subcribers.append(callback)
 
+    @measure_time
     def solve(self) -> Board:
+        start = time.perf_counter()
         self.assign_edges_index()
 
         contraints = self.encode_rules()
@@ -56,22 +59,26 @@ class MySolver:
             bootstrap_with=contraints,
             use_timer=True,
             warm_start=True,
+            incr=True,
         ) as solver:
             for retried, test_solution in enumerate(solver.enum_models(), start=1):
-                # Check for cancellation
-                if self.cancel_event and self.cancel_event.is_set():
-                    break
-
                 # Update stats
                 self.stats.clauses = solver.nof_clauses()
                 self.stats.variables = solver.nof_vars()
-                self.stats.time = solver.time_accum()
+                self.stats.acum_time += solver.time() + time.perf_counter() - start
                 self.stats.retried = retried
+
+                # Check for cancellation
+                if self.cancel_event and self.cancel_event.is_set():
+                    break
 
                 if self.subcribers:
                     self._extract_solution(test_solution)
                     for callback in self.subcribers:
                         callback(self.board, self.stats)
+
+                start = time.perf_counter()
+
                 if self._validate(test_solution):
                     self._extract_solution(test_solution)
                     self.board.solved = True

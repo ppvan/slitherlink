@@ -51,7 +51,7 @@ def evaluate_boards():
                             )
                         else:
                             cancel.set()
-                            stats = Statistics(time=TIMEOUT)
+                            stats = Statistics(acum_time=TIMEOUT)
                             write_info(
                                 writer,
                                 size,
@@ -77,7 +77,7 @@ def write_info(
             size,
             board.hints,
             diff,
-            stats.time,
+            stats.acum_time,
             stats.clauses,
             stats.variables,
             stats.retried,

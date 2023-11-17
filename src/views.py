@@ -233,7 +233,7 @@ class ControlFrame(ttk.Frame):
         self.animation = tk.BooleanVar(value=False)
         self.animation.set(False)
 
-        self.time = tk.StringVar(value="0.000 ms")
+        self.acum_time = tk.StringVar(value="0.000 ms")
         self.clauses = tk.StringVar(value="0")
         self.variables = tk.StringVar(value="0")
         self.retried = tk.StringVar(value="0")
@@ -276,7 +276,7 @@ class ControlFrame(ttk.Frame):
         self.viewmodel.cancel_cmd(done_callback=done)
 
     def update_stats(self):
-        self.time.set(f"{(self.viewmodel.stats.time * 1000):.2f} ms")
+        self.acum_time.set(f"{(self.viewmodel.stats.acum_time * 1000):.2f} ms")
         self.clauses.set(f"{self.viewmodel.stats.clauses}")
         self.variables.set(f"{self.viewmodel.stats.variables}")
         self.retried.set(f"{self.viewmodel.stats.retried}")
@@ -336,7 +336,7 @@ class ControlFrame(ttk.Frame):
 
         row2 = ttk.Frame(option_fr)
         label2 = ttk.Label(row2, text="Time", width=12)
-        timelabel = ttk.Label(row2, text="0", textvariable=self.time)
+        timelabel = ttk.Label(row2, text="0", textvariable=self.acum_time)
         label2.pack(side=tk.LEFT, padx=4, pady=2)
         timelabel.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
 
