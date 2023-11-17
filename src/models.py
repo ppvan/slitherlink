@@ -127,6 +127,9 @@ class Board:
         self.graph = defaultdict(list)
         self.nodes = [[Node(i, j) for j in range(columns + 1)] for i in range(rows + 1)]
         self.solved = False
+        self.hints = sum(
+            1 for cell_row in cells for cell in cell_row if cell.value >= 0
+        )
 
     def deep_copy(self):
         cells = deepcopy(self.cells)

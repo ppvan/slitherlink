@@ -231,13 +231,13 @@ class ControlFrame(ttk.Frame):
         self.difficulty = tk.StringVar()
         self.index = tk.StringVar()
         self.animation = tk.BooleanVar(value=False)
-
         self.animation.set(False)
 
         self.time = tk.StringVar(value="0.000 ms")
         self.clauses = tk.StringVar(value="0")
         self.variables = tk.StringVar(value="0")
         self.retried = tk.StringVar(value="0")
+        self.hints = tk.StringVar(value="0")
 
         self.build_ui()
 
@@ -280,6 +280,7 @@ class ControlFrame(ttk.Frame):
         self.clauses.set(f"{self.viewmodel.stats.clauses}")
         self.variables.set(f"{self.viewmodel.stats.variables}")
         self.retried.set(f"{self.viewmodel.stats.retried}")
+        self.hints.set(f"{self.viewmodel.board.hints}")
         pass
 
     def build_ui(self):
@@ -357,6 +358,12 @@ class ControlFrame(ttk.Frame):
         label5.pack(side=tk.LEFT, padx=4, pady=2)
         label5_val.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
 
+        row6 = ttk.Frame(option_fr)
+        label6 = ttk.Label(row6, text="Hints", width=12)
+        label6_val = ttk.Label(row6, text="0", textvariable=self.hints)
+        label6.pack(side=tk.LEFT, padx=4, pady=2)
+        label6_val.pack(side=tk.RIGHT, padx=2, pady=2, expand=True, fill=tk.X)
+
         row1.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row10.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row11.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
@@ -365,6 +372,7 @@ class ControlFrame(ttk.Frame):
         row3.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row4.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         row5.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
+        row6.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
         option_fr.pack(side=tk.TOP, fill=tk.X, padx=2, pady=2)
 
         spacer = ttk.Frame(self)

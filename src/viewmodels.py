@@ -5,7 +5,6 @@ from repository import BoardRepository
 import random
 from collections import defaultdict
 from threading import Thread, Event
-import time
 
 
 class BoardViewModel:
