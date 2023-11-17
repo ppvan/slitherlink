@@ -1,12 +1,12 @@
 from typing import List, MutableSet, Callable, FrozenSet
 from collections import defaultdict
-import pycosat
-import time
 import sys
 from dataclasses import dataclass
 from models import Board, Node
 from functools import cache
 import threading
+
+from pysat.solvers import Solver
 
 
 @dataclass
@@ -29,7 +29,7 @@ class Statistics:
         self.retried = 0
 
 
-class Solver:
+class MySolver:
     def __init__(
         self,
         board: Board,
@@ -51,41 +51,31 @@ class Solver:
         self.assign_edges_index()
 
         contraints = self.encode_rules()
-        m = self.board.rows
-        n = self.board.columns
-        total_time = 0
-        variables = (m + 1) * n + (n + 1) * m
-        clauses = len(contraints)
-        retried = 0
+        with Solver(
+            "g4",
+            bootstrap_with=contraints,
+            use_timer=True,
+            warm_start=True,
+        ) as solver:
+            for retried, test_solution in enumerate(solver.enum_models(), start=1):
+                # Check for cancellation
+                if self.cancel_event and self.cancel_event.is_set():
+                    break
 
-        start = time.perf_counter()
-        for test_solution in pycosat.itersolve(contraints):
-            clauses += 1  # one more clause for each iteration
-            retried += 1
-            # only account for SAT solving time
-            total_time += time.perf_counter() - start
+                # Update stats
+                self.stats.clauses = solver.nof_clauses()
+                self.stats.variables = solver.nof_vars()
+                self.stats.time = solver.time_accum()
+                self.stats.retried = retried
 
-            # Check for cancellation
-            if self.cancel_event and self.cancel_event.is_set():
-                break
-
-            # Update stats
-            self.stats.clauses = clauses
-            self.stats.variables = variables
-            self.stats.time = total_time
-            self.stats.retried = retried
-
-            if self.subcribers:
-                self._extract_solution(test_solution)
-                for callback in self.subcribers:
-                    callback(self.board, self.stats)
-
-            # only account for SAT solving time
-            start = time.perf_counter()
-            if self._validate(test_solution):
-                self._extract_solution(test_solution)
-                self.board.solved = True
-                break
+                if self.subcribers:
+                    self._extract_solution(test_solution)
+                    for callback in self.subcribers:
+                        callback(self.board, self.stats)
+                if self._validate(test_solution):
+                    self._extract_solution(test_solution)
+                    self.board.solved = True
+                    break
 
         return self.board
 

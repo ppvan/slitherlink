@@ -1,4 +1,4 @@
-from solver import Solver, Statistics
+from solver import MySolver, Statistics
 from viewmodels import BoardViewModel
 from models import Board
 from repository import BoardRepository
@@ -23,12 +23,12 @@ def evaluate_boards():
             writer.writerow(
                 ["Index", "Size", "Hints", "Diff", "Time", "Vars", "Clause", "Retried"]
             )
-            for size in BOARD_SIZES[:5]:
+            for size in BOARD_SIZES[:4]:
                 for diff in DIFFICULTY:
-                    for i in PUZZLES:
+                    for i in PUZZLES[:5]:
                         viewmodel.new_board_cmd(size, diff, i)
                         cancel = Event()
-                        solver = Solver(viewmodel.board, cancel)
+                        solver = MySolver(viewmodel.board, cancel)
 
                         future = executor.submit(do_solve, solver)
 
@@ -85,7 +85,7 @@ def write_info(
     )
 
 
-def do_solve(solver: Solver):
+def do_solve(solver: MySolver):
     return solver.solve()
 
 

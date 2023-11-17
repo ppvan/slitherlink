@@ -1,5 +1,5 @@
 from models import Board
-from solver import Solver, Statistics
+from solver import MySolver, Statistics
 from typing import List, Callable
 from repository import BoardRepository
 import random
@@ -74,7 +74,7 @@ class BoardViewModel:
             self.graph_changed()
             # time.sleep(0.5)
 
-        solver = Solver(board=self.board, cancel_event=cancel)
+        solver = MySolver(board=self.board, cancel_event=cancel)
         if animation:
             solver.add_partial_solution_callback(update_ui)
 
@@ -102,5 +102,5 @@ class BoardViewModel:
         done_callback()
 
     def _profile_solve(self):
-        solver = Solver(self.board)
+        solver = MySolver(self.board)
         solver.solve()
