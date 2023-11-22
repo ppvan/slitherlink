@@ -84,6 +84,8 @@ class MySolver:
 
                 start = time.perf_counter()
 
+                for hints in self.hint_clauses:
+                    solver.add_clause(hints)
                 if self._validate(test_solution):
                     self._extract_solution(test_solution)
                     self.board.solved = True
@@ -106,16 +108,48 @@ class MySolver:
 
         self._extract_solution(ans)
 
-        start = next(
-            (node for node, neighbors in self.board.graph.items() if neighbors), None
-        )
-        visited = set()
-        self._dfs(start, visited)
+        loops = self.extract_loops(models)
 
-        if len(visited) != len(self.board.graph):
+        if len(loops) > 1:
+            # self.hint_clauses.append([-x for x in self.extract_loop_edge(visited)])
             return False
 
         return True
+
+    def extract_loops(self, models):
+        loops = []
+
+        def get_start():
+            return next(
+                (
+                    node
+                    for node, neighbors in self.board.graph.items()
+                    if neighbors and node not in all_visisted
+                ),
+                None,
+            )
+
+        all_visisted = set()
+        start = get_start()
+
+        while start:
+            visited = set()
+            self._dfs(start, visited)
+            loops.append(visited)
+            hints = set()
+            for node in visited:
+                edges = [
+                    x
+                    for x in [node.top, node.bottom, node.left, node.right]
+                    if x in models
+                ]
+                hints.update(edges)
+
+            self.hint_clauses.append([-x for x in hints])
+            all_visisted.update(visited)
+            start = get_start()
+
+        return loops
 
     def assign_edges_index(self):
         m = self.board.rows
@@ -230,6 +264,9 @@ class MySolver:
                 contraints.extend(cnf)
 
         return contraints
+
+    def break_loop(self, graph):
+        pass
 
     def _break_smalloop(self):
         contraints = []
@@ -350,48 +387,46 @@ class MySolver:
             cnf += [[cell.top], [cell.bottom], [vert_next.top]]
         elif cell.value == 3 and hoz_next.value == 3:
             cnf += [[cell.left], [cell.right], [hoz_next.left]]
-        # elif cell.value == 3 and vert_next.value == 0:
-        #     l_cell = self.board.cells[i][j - 1]
-        #     r_cell = hoz_next
-        #     cnf += [
-        #         [cell.top],
-        #         [cell.left],
-        #         [cell.right],
-        #         [l_cell.bottom],
-        #         [r_cell.bottom],
-        #     ]
-        # elif cell.value == 0 and vert_next.value == 3:
-        #     l_cell = self.board.cells[i][j - 1]
-        #     r_cell = hoz_next
-        #     cnf += [
-        #         [vert_next.bottom],
-        #         [vert_next.left],
-        #         [vert_next.right],
-        #         [l_cell.bottom],
-        #         [r_cell.bottom],
-        #     ]
-        # elif cell.value == 3 and hoz_next.value == 0:
-        #     t_cell = self.board.cells[i - 1][j]
-        #     b_cell = vert_next
-        #     cnf += [
-        #         [cell.top],
-        #         [cell.left],
-        #         [cell.bottom],
-        #         [t_cell.right],
-        #         [b_cell.right],
-        #     ]
-        # elif cell.value == 0 and hoz_next.value == 3:
-        #     t_cell = self.board.cells[i - 1][j]
-        #     b_cell = vert_next
-        #     cnf += [
-        #         [hoz_next.top],
-        #         [hoz_next.right],
-        #         [hoz_next.bottom],
-        #         [t_cell.right],
-        #         [b_cell.right],
-        #     ]
-        # elif cell.value == 2 and hoz_next.value == 2:
-        #     cnf += [[cell.left], [cell.right], [hoz_next.left], [hoz_next.right]]
+        elif cell.value == 3 and vert_next.value == 0:
+            l_cell = self.board.cells[i][j - 1]
+            r_cell = hoz_next
+            cnf += [
+                [cell.top],
+                [cell.left],
+                [cell.right],
+                [l_cell.bottom],
+                [r_cell.bottom],
+            ]
+        elif cell.value == 0 and vert_next.value == 3:
+            l_cell = self.board.cells[i][j - 1]
+            r_cell = hoz_next
+            cnf += [
+                [vert_next.bottom],
+                [vert_next.left],
+                [vert_next.right],
+                [l_cell.bottom],
+                [r_cell.bottom],
+            ]
+        elif cell.value == 3 and hoz_next.value == 0:
+            t_cell = self.board.cells[i - 1][j]
+            b_cell = vert_next
+            cnf += [
+                [cell.top],
+                [cell.left],
+                [cell.bottom],
+                [t_cell.right],
+                [b_cell.right],
+            ]
+        elif cell.value == 0 and hoz_next.value == 3:
+            t_cell = self.board.cells[i - 1][j]
+            b_cell = vert_next
+            cnf += [
+                [hoz_next.top],
+                [hoz_next.right],
+                [hoz_next.bottom],
+                [t_cell.right],
+                [b_cell.right],
+            ]
 
         return cnf
 

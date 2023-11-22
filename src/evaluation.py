@@ -23,7 +23,7 @@ def evaluate_boards():
             writer.writerow(
                 ["Index", "Size", "Hints", "Diff", "Time", "Vars", "Clause", "Retried"]
             )
-            for size in BOARD_SIZES[2:4]:
+            for size in BOARD_SIZES:
                 for diff in DIFFICULTY:
                     for i in PUZZLES:
                         viewmodel.new_board_cmd(size, diff, i)
