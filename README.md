@@ -2,6 +2,9 @@
 
 A slitherlink solver with simple UI written in Python
 
+
+![assets/screenshot.png](https://raw.githubusercontent.com/ppvan/slitherlink/main/assets/screenshot.png)
+
 ## Installation
 ```bash
 git clone https://github.com/ppvan/slitherlink.git
@@ -13,6 +16,7 @@ pip install -r requirements.txt
 ```bash
 python src/main.py
 ```
+
 
 ## Credits
 

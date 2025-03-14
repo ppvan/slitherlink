@@ -1,11 +1,13 @@
+import time
 import tkinter as tk
+from tkinter import font as tkfont
 from tkinter import ttk
 from typing import Tuple
-from tkinter import font as tkfont
+
 import sv_ttk
 from PIL import Image, ImageTk
+
 from viewmodels import BoardViewModel
-import time
 
 
 class Window(tk.Tk):
@@ -74,6 +76,7 @@ class BoardFrame(ttk.Frame):
 
         self.canvas.create_rectangle(0, 0, img.width, img.height, fill="red")
         self.canvas.create_image(0, 0, image=self.photo, anchor="nw")
+        pass
 
     def redraw_edges(self):
         rows = self.viewmodel.board.rows
